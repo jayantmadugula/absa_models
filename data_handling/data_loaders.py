@@ -75,7 +75,7 @@ class EmbeddedDataLoader(BaseDataLoader):
             metadata = np.load(self._metadata, mmap_mode='r')
             return metadata[idx_range]
 
-    def _split_chunks(self, idx_range: Iterable[int]) -> Generator[Iterable[int]]:
+    def _split_chunks(self, idx_range: Iterable[int]) -> Generator[Iterable[int], None, None]:
         '''
         Splits a list of indices into chunks based on `self._n_threads`.
 
