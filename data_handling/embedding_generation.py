@@ -164,6 +164,21 @@ def flatten_sentence_vectors(word_matrix: np.ndarray) -> np.ndarray:
     
     return np.stack(new_vecs)
 
+def check_embedding(text: str, text_embedding: np.ndarray, emb_dict: Dict[str, np.ndarray]) -> bool:
+    '''
+    Simple check to make sure an inputed sentence
+    or text fragment correctly matches a matrix
+    of word vectors.
+    
+    Parameters:
+    - `text`: text fragment
+    - `text_embedding`: appended word vectors to check
+    - `emb_dict`: dictionary containing embeddings
+    '''
+    for word, word_emb in zip(text.split(), text_embedding):
+        if (emb_dict[word] != word_emb).all(): return False
+    return True
+
 def _embed_phrase(phrase: str, emb_dict: Dict[str, np.ndarray], emb_dim: int, pad_word: str = None):
     '''
     Provides the embedding for a given phrase.
