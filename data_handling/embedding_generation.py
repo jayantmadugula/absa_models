@@ -107,6 +107,63 @@ def embed_phrases(
     f.close()
     return pd.DataFrame.from_dict({'phrases': processed_phrases, 'embedded': embedded_phrases})
 
+def generate_ngram_matrix(
+    texts: Iterable[str],
+    embedding_rootpath: str,
+    embedding_type: PreTrainedEmbeddings,
+    embedding_dimension: int,
+    pad_word='inv') -> np.ndarray:
+    '''
+    Builds a 2D matrix representation of the inputed `texts`
+    using pretrained GloVe word embeddings.
+
+    Returns a numpy matrix with shape `(n, emb_dim)`
+    where `n == len(texts)`
+    '''
+    emb_filepath = _build_pretrained_embedding_filepath(
+        embedding_rootpath, 
+        embedding_type, 
+        embedding_dimension=embedding_dimension)
+    f = open(emb_filepath)
+    emb_dict = _build_pretrained_embedding(f)
+
+    line_vecs = []
+    for line in texts:
+        vecs = []
+        words = line.split(' ')
+        for word in words:
+            if word not in emb_dict:
+                vec = np.zeros(embedding_dimension)
+            elif word == pad_word:
+                vec = np.zeros(embedding_dimension)
+            else:
+                vec = emb_dict[word]
+            vecs.append(vec)
+
+        line_vec = np.stack(vecs)
+        line_vecs.append(line_vec)
+    
+    return np.stack(line_vecs)
+
+def flatten_sentence_vectors(word_matrix: np.ndarray) -> np.ndarray:
+    '''
+    Creates a flattened 1D vector per sentence, with 
+    length equal to number of words in the sentence and
+    the embedding dimension.
+    
+    Requires a word matrix as input.
+    
+    in_shape: (?, x, y)
+    out_shape: (?, x * y)
+    '''
+    new_vecs = []
+    for sent_vec in word_matrix:
+        r, c = sent_vec.shape
+        new_vec = sent_vec.reshape((r*c))
+        new_vecs.append(new_vec)
+    
+    return np.stack(new_vecs)
+
 def _embed_phrase(phrase: str, emb_dict: Dict[str, np.ndarray], emb_dim: int):
     '''
     Provides the embedding for a given phrase.
