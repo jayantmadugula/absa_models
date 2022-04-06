@@ -132,12 +132,12 @@ def generate_ngram_matrix(
         vecs = []
         words = line.split(' ')
         for word in words:
-            if word not in emb_dict:
-                vec = np.zeros(embedding_dimension)
-            elif word == pad_word:
-                vec = np.zeros(embedding_dimension)
-            else:
-                vec = emb_dict[word]
+            vec = _embed_phrase(
+                word,
+                emb_dict,
+                embedding_dimension,
+                pad_word
+            )
             vecs.append(vec)
 
         line_vec = np.stack(vecs)
@@ -164,15 +164,17 @@ def flatten_sentence_vectors(word_matrix: np.ndarray) -> np.ndarray:
     
     return np.stack(new_vecs)
 
-def _embed_phrase(phrase: str, emb_dict: Dict[str, np.ndarray], emb_dim: int):
+def _embed_phrase(phrase: str, emb_dict: Dict[str, np.ndarray], emb_dim: int, pad_word: str = None):
     '''
     Provides the embedding for a given phrase.
 
     If the given phrase cannot be found in the pre-trained embeddings,
     a zero-array of dimension `emb_dim` is returned.
     '''
-    if phrase in emb_dict:
-        return emb_dict[phrase]
+    if pad_word is not None and phrase == pad_word:
+        return np.zeros(emb_dim)
+    elif phrase in emb_dict:
+        return emb_dict[phrase]  
     else:
         return np.zeros(emb_dim)
 
