@@ -1,8 +1,7 @@
 '''
-This file contains the classes defining the details
+This file contains classes defining the details
 of how each dataset is stored in the SQLite3 database.
 '''
-
 
 class GenericTableDetails():
     '''
