@@ -10,7 +10,7 @@ at various points of the training and testing process.
 Concrete subclasses should implement:
 - __len__()
 - on_epoch_end()
-- __get_item__()
+- __getitem__()
 '''
 
 from typing import Iterable
