@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Embedding
 import analysis.classifier_metrics as cm
 
 
-class BaseKerasModel():
+class BaseModel():
     '''
     This class defines a basic set of functions.
     '''
@@ -26,7 +26,7 @@ class BaseKerasModel():
     def predict(self, data):
         raise NotImplementedError()
 
-class BaseDeepNeuralNetwork(BaseKerasModel):
+class BaseDeepNeuralNetwork(BaseModel):
     def __init__(self):
         raise NotImplementedError('This is an abstract base class. Please use a concrete subclass.')
 
@@ -36,7 +36,7 @@ class BaseDeepNeuralNetwork(BaseKerasModel):
         '''
         raise NotImplementedError
 
-class SKLearnSentimentPredictor(BaseKerasModel):
+class SKLearnSentimentPredictor(BaseModel):
     '''
     This class is a wrapper for a Support Vector Classifier
     from scikit-learn.
