@@ -1,4 +1,8 @@
 {
+    "database_path": "../databases/corpus_database.db",
     "embedding_root_path": "./embedding_data/",
-    "embedding_type": "glove"
+    "embedding_type": "glove",
+    "num_processes": 8,
+    "ngram_batch_size": 100000,
+    "document_batch_size": 25000
 }
