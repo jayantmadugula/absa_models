@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from string import ascii_lowercase
-from training_utilities import data_preparation as dp
+from utilities import data_preparation as dp
 
 class DataPreparationUnitTests(unittest.TestCase):
     def setUp(self) -> None:
