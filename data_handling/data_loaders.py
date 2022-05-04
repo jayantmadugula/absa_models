@@ -89,11 +89,10 @@ class EmbeddedDataLoader(BaseDataLoader):
         '''
         Fetches data that have an index found in `indices`.
         '''
-        dir_path = f'../embedded_ngrams/citysearch/n{self._n}_d{self._emb_dim}/'
         np_arrs = []
         for i in indices:
             filename = f'{i}.npy'
-            np_arrs.append(np.load(dir_path + filename))
+            np_arrs.append(np.load(self._dir_path + filename))
         return np.stack(np_arrs)
 
 
