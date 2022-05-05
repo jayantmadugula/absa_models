@@ -33,7 +33,6 @@ if __name__ == '__main__':
         ''')
     parser.add_argument(
         'dataset',
-        nargs=1,
         type=str,
         choices=['restaurantreviews', 'semeval16', 'sst', 'socc'],
         help='identifies which dataset will be used for embedding'
@@ -41,17 +40,15 @@ if __name__ == '__main__':
     parser.add_argument(
         '--target',
         '-t',
-        nargs=1,
         type=str,
         choices=['ngram', 'document', 'word'],
-        default='ngram',
+        default='document',
         dest='emb_target',
         help='determines whether the script embeds ngrams, documents, or individual words'
     )
     parser.add_argument(
         '--ngram_len',
         '-n',
-        nargs=1,
         type=int,
         default=None,
         dest='ngram_len',
@@ -60,7 +57,6 @@ if __name__ == '__main__':
     parser.add_argument(
         '--text_filtering',
         '-f',
-        nargs=1,
         type=str,
         choices=['none', 'pos'],
         default='none',
@@ -70,9 +66,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     selected_dataset = args.dataset
-    embedding_target = parser.emb_target
-    ngram_len = parser.ngram_len
-    text_filtering_option = parser.filtering_option
+    embedding_target = args.emb_target
+    ngram_len = args.ngram_len
+    text_filtering_option = args.filtering_option
 
     # Get parameters.
     with open('./parameters.json') as params_fp:
@@ -88,16 +84,17 @@ if __name__ == '__main__':
     # Read data from database.
     db_handler = DatabaseHandler(db_path)
 
-    additional_args = 'pos-filter' if text_filtering_option else None
+    filter_arg = 'pos-filter' if text_filtering_option else None
     table_name = get_table_name(
-        dataset=selected_dataset,
+        selected_dataset,
+        filter_arg,
         get_documents=(embedding_target != 'ngram'),
         get_metadata=False,
-        ngram_len=ngram_len,
-        args=additional_args
+        ngram_len=ngram_len
     )
     batched_data = db_handler.read(
         table_name,
         chunksize=batch_size,
         retry=True
     )
+    print(type(batched_data))

@@ -6,10 +6,10 @@ tables, columns, and indices.
 
 def get_table_name(
     dataset: str, 
+    *args,
     get_documents: bool = True, 
     get_metadata: bool = False,
-    ngram_len: int = None,
-    *args) -> str:
+    ngram_len: int = None) -> str:
     if dataset == 'restaurantreviews':
         if get_documents:
             return construct_restaurantreviews_document_table_name()

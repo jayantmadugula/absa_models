@@ -43,9 +43,10 @@ class DatabaseHandler():
         - `retry`: will retry the read operation once if set to `True`
         '''
         try:
-            if columns is not None: 
+            if columns is not None:
+                columns = [f'"{c}"' for c in columns]
                 if index_column_name not in columns:
-                    columns = f'{index_column_name}, {", ".join(columns)}'
+                    columns = f'"{index_column_name}", {", ".join(columns)}'
                 sql_query = f'SELECT {columns} FROM {table_name}'
                 print(sql_query)
             else: 
@@ -53,13 +54,19 @@ class DatabaseHandler():
             if row_indices is not None:
                 sql_query += ' WHERE {} IN {}'.format(index_column_name, tuple(row_indices))
 
-            sql_query += f' ORDER BY {index_column_name} ASC'
+            sql_query += f' ORDER BY "{index_column_name}" ASC'
 
             data = pd.read_sql_query(sql_query, self._conn, index_col=index_column_name, chunksize=chunksize)
         except Exception as e:
             if retry:
                 self._get_db_connection()
-                self.read(chunksize=chunksize, range=range, columns=columns, retry=False)
+                self.read(
+                    table_name=table_name,
+                    index_column_name=index_column_name,
+                    chunksize=chunksize,
+                    row_indices=row_indices,
+                    columns=columns, 
+                    retry=False)
             else:
                 raise e
 
