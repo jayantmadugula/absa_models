@@ -24,13 +24,13 @@ class PreTrainedEmbeddings(Enum):
         if s.lower() == 'glove':
             return PreTrainedEmbeddings.GLOVE
         else:
-            raise ValueError()
+            raise ValueError(f'There is no implementation for: {s}.')
 
     def validate_embedding_dimension(self, embedding_dimension: int) -> bool: 
         if (self is PreTrainedEmbeddings.GLOVE):
             return embedding_dimension in {50, 100, 200, 300}
         else:
-            raise ValueError()
+            raise ValueError(f'There is no implementation for: {self}.')
 
 def get_embedding_dictionary(
     embedding_rootpath: str,
