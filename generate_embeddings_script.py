@@ -9,8 +9,6 @@ Global settings for this script are defined in
 import argparse
 import json
 from multiprocessing import Pool
-import numpy as np
-from pathlib import Path
 from functools import partial
 from data_handling.embedding_generation import PreTrainedEmbeddings, generate_ngram_matrix
 
@@ -25,8 +23,7 @@ def validate_embedding_type(emb_type: str):
 
     raise ValueError('Invalid embedding type provided.')
 
-if __name__ == '__main__':
-    # Set up script argument parameters.
+def setup_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='''
         Creates and saves embedded representations of ngrams,
         documents, or individual words in a corpus.
@@ -75,6 +72,11 @@ if __name__ == '__main__':
         help='passing True for this argument causes the script to skip writing the embedding data'
     )
 
+    return parser
+
+if __name__ == '__main__':
+    # Get user provided parameters.
+    parser = setup_argparse()
     args = parser.parse_args()
     selected_dataset = Dataset.get_dataset(args.dataset)
     embedding_target = args.emb_target
@@ -82,7 +84,7 @@ if __name__ == '__main__':
     text_filtering_option = args.filtering_option
     debug = args.enable_debug
 
-    # Get parameters.
+    # Get general parameters.
     with open('./parameters.json') as params_fp:
         params = json.load(params_fp)
 
@@ -114,10 +116,6 @@ if __name__ == '__main__':
     if debug: print(type(batched_data))
 
     # Embed the data.
-    # TODO: This needs to be aware of db table schema information and take parameters into account.
-    # Identify the required information for each "target type" in the general case.
-    # Then create specific functions to get those columns.
-
     output_emb_path = f'{emb_output_dir}/{selected_dataset.value}/emb_{table_name}/'
     output_emb_path = output_emb_path.replace('//', '/')
 
@@ -135,11 +133,15 @@ if __name__ == '__main__':
     )
 
     for i, batch in enumerate(batched_data):
+        # Get column with data to embed for the current context.
         col_name = Dataset.get_text_column_name(table_name)
+        
+        # Split the current batch into chunks for multiprocessing.
         batched_doc = split_chunks(batch.loc[:, col_name], num_procs)
         batched_idx = split_chunks(batch.index, num_procs)
 
         with Pool(num_procs) as p:
+            # For each chunk, embed the data and save to a .npy file.
             grouped_embeddings = p.map(generate_matrix_partial, batched_doc)
             p.starmap(
                 save_embeddings_partial, 
