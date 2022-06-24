@@ -19,8 +19,8 @@ def save_embeddings(
     '''
     if debug:
         print('[Debug] Save function received a list of embeddings' \
-            + f'with length {len(embeddings_list)} and a list of ids' \
-            + f'with length {len(ids_list)}. The write path is {directory_path}')
+            + f' with length {len(embeddings_list)} and a list of ids' \
+            + f' with length {len(ids_list)}. The write path is {directory_path}')
         return
 
     try:
