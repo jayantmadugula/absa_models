@@ -43,6 +43,8 @@ class DatabaseHandler():
         - `retry`: will retry the read operation once if set to `True`
         '''
         try:
+            table_name = f'"{table_name}"'
+
             if columns is not None:
                 columns = [f'"{c}"' for c in columns]
                 if index_column_name not in columns:
@@ -54,7 +56,8 @@ class DatabaseHandler():
             if row_indices is not None:
                 sql_query += ' WHERE {} IN {}'.format(index_column_name, tuple(row_indices))
 
-            sql_query += f' ORDER BY "{index_column_name}" ASC'
+            if index_column_name is not None:
+                sql_query += f' ORDER BY "{index_column_name}" ASC'
 
             data = pd.read_sql_query(sql_query, self._conn, index_col=index_column_name, chunksize=chunksize)
         except Exception as e:

@@ -12,10 +12,17 @@ import numpy as np
 def save_embeddings(
     embeddings_list: Iterable[str], 
     ids_list: Iterable[int], 
-    directory_path: str):
+    directory_path: str,
+    debug: bool = False):
     '''
     Saves an embedding matrix to an .npy file.
     '''
+    if debug:
+        print('[Debug] Save function received a list of embeddings' \
+            + f'with length {len(embeddings_list)} and a list of ids' \
+            + f'with length {len(ids_list)}. The write path is {directory_path}')
+        return
+
     try:
         p = Path(directory_path)
         p.mkdir(parents=True)
