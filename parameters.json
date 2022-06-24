@@ -1,7 +1,9 @@
 {
     "database_path": "../databases/corpus_database.db",
-    "embedding_root_path": "./embedding_data/",
+    "embedding_root_path": "../datasets/embedding_data/",
+    "embedding_output_root_dir": "./generated_embeddings/",
     "embedding_type": "glove",
+    "embedding_dimension": 200,
     "num_processes": 8,
     "ngram_batch_size": 100000,
     "document_batch_size": 25000
