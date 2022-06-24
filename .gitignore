@@ -132,4 +132,4 @@ dmypy.json
 .vscode/
 
 # Project specific
-embeddings/
+generated_embeddings/
