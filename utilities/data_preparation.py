@@ -3,7 +3,7 @@ This file contains functions useful to prepare data before
 training a model.
 '''
 
-from typing import Iterable
+from typing import Generator, Iterable
 import pandas as pd
 import numpy as np
 import math
@@ -73,3 +73,12 @@ def split_indices_randomly(num_samples, train_size) -> Iterable[np.ndarray]:
     indices = np.arange(num_samples)
     np.random.shuffle(indices)
     return np.split(indices, [train_size])
+
+def split_chunks(data_list: Iterable, n_procs: int) -> Generator:
+    '''
+    Splits `data_list` into chunks for preprocessing
+    using `n_procs` parallel processes.
+    '''
+    chunksize = int(len(data_list) / n_procs)
+    for i in range(0, len(data_list), chunksize):
+        yield data_list[i:i + chunksize]
