@@ -86,6 +86,36 @@ class DatabaseHandler():
         self._confirm_operation()
         return count
 
+    def get_longest_document_length(self, table_name: str, data_col_name: str):
+        '''
+        Finds the length of the document with the most words.
+        Assumes words are separated by a single space.
+        '''
+        # SQL query from:
+        # https://stackoverflow.com/questions/41952250/sql-string-counting-words-inside-a-string
+        # https://stackoverflow.com/questions/41874972/replacing-variable-length-string-with-some-word
+
+        sql_query = '''
+            WITH temp AS
+            (
+            SELECT  Id,
+                    REPLACE(REPLACE(REPLACE({}, ' ', '><'
+                                        ), '<>', ''
+                                ), '><', ' '
+                            ) AS text
+            FROM {}
+            )
+            SELECT id, 
+                    length(text) - length(REPLACE(text, ' ', '')) + 1 AS counts 
+            FROM temp 
+            ORDER BY counts 
+            DESC LIMIT 1
+        '''.format(data_col_name, table_name)
+        
+        c = self._get_db_cursor()
+        max_len = c.execute(sql_query).fetchone()[-1]
+        return max_len
+
     # Private Methods
     def _get_db_connection(self):
         if self._conn is not None:
