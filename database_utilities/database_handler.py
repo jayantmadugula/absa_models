@@ -95,7 +95,6 @@ class DatabaseHandler():
         chunksize: int = None) -> int:
         '''
         Finds the length of the document with the most words.
-        Assumes words are separated by a single space.
         '''
         sql_query = 'SELECT {} FROM {}'.format(data_col_name, table_name)
         data_df = pd.read_sql_query(sql_query, self._conn, chunksize=chunksize)
