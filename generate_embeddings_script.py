@@ -10,7 +10,7 @@ import argparse
 import json
 from multiprocessing import Pool
 from functools import partial
-from typing import Iterable
+from data_handling.document_tokenizers import simple_tokenizer
 from data_handling.embedding_generation import PreTrainedEmbeddings, generate_ngram_matrix
 
 from database_utilities.database_handler import DatabaseHandler
@@ -82,9 +82,6 @@ def setup_argparse() -> argparse.ArgumentParser:
     )
 
     return parser
-
-def simple_tokenizer(doc: str) -> Iterable[str]:
-        return doc.split()
 
 if __name__ == '__main__':
     # Get script specific parameters.
