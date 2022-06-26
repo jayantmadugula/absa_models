@@ -3,7 +3,8 @@ This file contains the definition for `DatabaseHandler`,
 a class used to easily access data from a SQLite3 database.
 '''
 
-from typing import Iterable
+import chunk
+from typing import Callable, Iterable
 import sqlite3
 import pandas as pd
 
@@ -86,35 +87,24 @@ class DatabaseHandler():
         self._confirm_operation()
         return count
 
-    def get_longest_document_length(self, table_name: str, data_col_name: str):
+    def get_longest_document_length(
+        self, 
+        table_name: str, 
+        data_col_name: str,
+        tokenizer: Callable[[str], int],
+        chunksize: int = None) -> int:
         '''
         Finds the length of the document with the most words.
         Assumes words are separated by a single space.
         '''
-        # SQL query from:
-        # https://stackoverflow.com/questions/41952250/sql-string-counting-words-inside-a-string
-        # https://stackoverflow.com/questions/41874972/replacing-variable-length-string-with-some-word
-
-        sql_query = '''
-            WITH temp AS
-            (
-            SELECT  Id,
-                    REPLACE(REPLACE(REPLACE({}, ' ', '><'
-                                        ), '<>', ''
-                                ), '><', ' '
-                            ) AS text
-            FROM {}
-            )
-            SELECT id, 
-                    length(text) - length(REPLACE(text, ' ', '')) + 1 AS counts 
-            FROM temp 
-            ORDER BY counts 
-            DESC LIMIT 1
-        '''.format(data_col_name, table_name)
+        sql_query = 'SELECT {} FROM {}'.format(data_col_name, table_name)
+        data_df = pd.read_sql_query(sql_query, self._conn, chunksize=chunksize)
         
-        c = self._get_db_cursor()
-        max_len = c.execute(sql_query).fetchone()[-1]
-        return max_len
+        max_doc_len = 0
+        for batch in data_df:
+            max_batch_len = batch.applymap(tokenizer)[data_col_name].str.len().max()
+            if max_doc_len < max_batch_len: max_doc_len = max_batch_len
+        return max_doc_len
 
     # Private Methods
     def _get_db_connection(self):
@@ -133,7 +123,7 @@ class DatabaseHandler():
 
     def _get_db_cursor(self):
         try:
-            c = self._conn.cusor()
+            c = self._conn.cursor()
         except:
             self._get_db_connection()
             c = self._conn.cursor()
