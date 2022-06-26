@@ -10,6 +10,7 @@ import argparse
 import json
 from multiprocessing import Pool
 from functools import partial
+from typing import Iterable
 from data_handling.embedding_generation import PreTrainedEmbeddings, generate_ngram_matrix
 
 from database_utilities.database_handler import DatabaseHandler
@@ -82,8 +83,11 @@ def setup_argparse() -> argparse.ArgumentParser:
 
     return parser
 
+def simple_tokenizer(doc: str) -> Iterable[str]:
+        return doc.split()
+
 if __name__ == '__main__':
-    # Get user provided parameters.
+    # Get script specific parameters.
     parser = setup_argparse()
     args = parser.parse_args()
     table_name = args.table_name
@@ -108,8 +112,16 @@ if __name__ == '__main__':
 
     filter_arg = 'pos-filter' if text_filtering_option else None
 
-    # Read data from database.
+    # Read data and set up parameters for embedding operations.
+    tokenizer = simple_tokenizer # used to consistently tokenize documents
+
     db_handler = DatabaseHandler(db_path)
+    max_doc_len = db_handler.get_longest_document_length(
+        table_name, 
+        database_column_name,
+        tokenizer,
+        batch_size)
+    
     batched_data = db_handler.read(
         table_name,
         chunksize=batch_size,
@@ -124,6 +136,8 @@ if __name__ == '__main__':
 
     generate_matrix_partial = partial(
         generate_ngram_matrix,
+        max_doc_len=max_doc_len,
+        tokenizer=tokenizer,
         embedding_rootpath=emb_root_path,
         embedding_type=emb_type,
         embedding_dimension=emb_dim

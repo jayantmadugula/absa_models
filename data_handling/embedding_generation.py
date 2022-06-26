@@ -5,7 +5,7 @@ and help validate an embedding.
 '''
 
 from enum import Enum
-from typing import Dict, Iterable
+from typing import Callable, Dict, Iterable
 import numpy as np
 import pandas as pd
 
@@ -109,6 +109,8 @@ def embed_phrases(
 
 def generate_ngram_matrix(
     texts: Iterable[str],
+    max_doc_len: int,
+    tokenizer: Callable[[str], int],
     embedding_rootpath: str,
     embedding_type: PreTrainedEmbeddings,
     embedding_dimension: int,
@@ -130,7 +132,7 @@ def generate_ngram_matrix(
     line_vecs = []
     for line in texts:
         vecs = []
-        words = line.split(' ')
+        words = tokenizer(line)
         for word in words:
             vec = _embed_phrase(
                 word,
@@ -139,6 +141,11 @@ def generate_ngram_matrix(
                 pad_word
             )
             vecs.append(vec)
+
+        doc_len = len(vecs)
+        if (max_doc_len - doc_len) > 0:
+            zero_arrs = [np.zeros(embedding_dimension)] * (max_doc_len - doc_len)
+            vecs.extend(zero_arrs)
 
         line_vec = np.stack(vecs)
         line_vecs.append(line_vec)
@@ -179,7 +186,11 @@ def check_embedding(text: str, text_embedding: np.ndarray, emb_dict: Dict[str, n
         if (emb_dict[word] != word_emb).all(): return False
     return True
 
-def _embed_phrase(phrase: str, emb_dict: Dict[str, np.ndarray], emb_dim: int, pad_word: str = None):
+def _embed_phrase(
+    phrase: str, 
+    emb_dict: Dict[str, np.ndarray], 
+    emb_dim: int, 
+    pad_word: str = None) -> np.ndarray:
     '''
     Provides the embedding for a given phrase.
 
