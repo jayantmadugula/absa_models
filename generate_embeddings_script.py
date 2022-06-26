@@ -14,7 +14,6 @@ from data_handling.embedding_generation import PreTrainedEmbeddings, generate_ng
 
 from database_utilities.database_handler import DatabaseHandler
 from utilities.data_preparation import split_chunks
-from utilities.datasets import Dataset
 from utilities.read_write import save_embeddings
 
 def validate_embedding_type(emb_type: str):
@@ -32,27 +31,36 @@ def setup_argparse() -> argparse.ArgumentParser:
         scripts can be found in `parameters.json`.
         ''')
     parser.add_argument(
-        'dataset',
+        'table_name',
         type=str,
-        choices=['restaurantreviews', 'semeval16', 'sst', 'socc'],
-        help='identifies which dataset will be used for embedding'
+        help='Identifies the name of the database table to use for embedding.'
     )
     parser.add_argument(
-        '--target',
+        'data_column_name',
+        type=str,
+        help='Identifies the name of the column with text to be embedded.'
+    )
+    parser.add_argument(
+        '--target_type',
         '-t',
         type=str,
         choices=['ngram', 'document', 'word'],
         default='ngram',
         dest='emb_target',
-        help='determines whether the script embeds ngrams, documents, or individual words'
+        required=True,
+        help='Determines whether the script embeds ngrams, documents, or individual words.'
     )
     parser.add_argument(
-        '--ngram_len',
-        '-n',
-        type=int,
-        default=None,
-        dest='ngram_len',
-        help='the number of "context" words on either side of the target word in each ngram'
+        '--output_directory_name',
+        '-o',
+        type=str,
+        dest='output_dir_name',
+        help='''
+        If provided, the script places the embeddings into this directory; the resulting path
+        would be: ./output_directory_name/table_name/ngram_idx.npy
+
+        If not provided, the script will use the table name for the parent directory's name.
+        '''
     )
     parser.add_argument(
         '--text_filtering',
@@ -61,7 +69,7 @@ def setup_argparse() -> argparse.ArgumentParser:
         choices=['none', 'pos'],
         default='none',
         dest='filtering_option',
-        help='identifies whether to use pre-filtered texts for embedding'
+        help='Identifies whether to use pre-filtered texts for embedding.'
     )
     parser.add_argument(
         '--debug',
@@ -69,7 +77,7 @@ def setup_argparse() -> argparse.ArgumentParser:
         type=bool,
         default=False,
         dest='enable_debug',
-        help='passing True for this argument causes the script to skip writing the embedding data'
+        help='When enabled, the script skips writing the embedding data to disk and prints debug information.'
     )
 
     return parser
@@ -78,9 +86,10 @@ if __name__ == '__main__':
     # Get user provided parameters.
     parser = setup_argparse()
     args = parser.parse_args()
-    selected_dataset = Dataset.get_dataset(args.dataset)
-    embedding_target = args.emb_target
-    ngram_len = args.ngram_len
+    table_name = args.table_name
+    database_column_name = args.data_column_name
+    data_output_dir = args.output_dir_name if args.output_dir_name else table_name
+    embedding_target = args.emb_target # TODO: if not ngram, we need to find max length to standardize array shape
     text_filtering_option = args.filtering_option
     debug = args.enable_debug
 
@@ -97,16 +106,10 @@ if __name__ == '__main__':
     emb_dim = params['embedding_dimension']
     emb_output_dir = params['embedding_output_root_dir']
 
+    filter_arg = 'pos-filter' if text_filtering_option else None
+
     # Read data from database.
     db_handler = DatabaseHandler(db_path)
-
-    filter_arg = 'pos-filter' if text_filtering_option else None
-    table_name = selected_dataset.get_table_name(
-        filter_arg,
-        get_documents=(embedding_target != 'ngram'),
-        get_metadata=False,
-        ngram_len=ngram_len
-    )
     batched_data = db_handler.read(
         table_name,
         chunksize=batch_size,
@@ -116,7 +119,7 @@ if __name__ == '__main__':
     if debug: print(type(batched_data))
 
     # Embed the data.
-    output_emb_path = f'{emb_output_dir}/{selected_dataset.value}/emb_{table_name}/'
+    output_emb_path = f'{emb_output_dir}/{data_output_dir}/emb_{table_name}/'
     output_emb_path = output_emb_path.replace('//', '/')
 
     generate_matrix_partial = partial(
@@ -133,11 +136,8 @@ if __name__ == '__main__':
     )
 
     for i, batch in enumerate(batched_data):
-        # Get column with data to embed for the current context.
-        col_name = Dataset.get_text_column_name(table_name)
-        
         # Split the current batch into chunks for multiprocessing.
-        batched_doc = split_chunks(batch.loc[:, col_name], num_procs)
+        batched_doc = split_chunks(batch.loc[:, database_column_name], num_procs)
         batched_idx = split_chunks(batch.index, num_procs)
 
         with Pool(num_procs) as p:
@@ -147,5 +147,5 @@ if __name__ == '__main__':
                 save_embeddings_partial, 
                 zip(grouped_embeddings, batched_idx))
     
-    print(f'Saved embedding ngrams with size {ngram_len}.')
+    print(f'Saved embedded text at output path: {output_emb_path}.')
 
