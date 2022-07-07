@@ -80,7 +80,7 @@ class DatabaseHandler():
         '''
         Computes the number of rows in the SQLite3 table.
         '''
-        sql_query = 'SELECT COUNT(*) FROM {}'.format(table_name)
+        sql_query = 'SELECT COUNT(*) FROM "{}"'.format(table_name)
         
         c = self._get_db_cursor()
         count = c.execute(sql_query).fetchone()[0]
@@ -96,7 +96,7 @@ class DatabaseHandler():
         '''
         Finds the length of the document with the most words.
         '''
-        sql_query = 'SELECT {} FROM {}'.format(data_col_name, table_name)
+        sql_query = 'SELECT {} FROM "{}"'.format(data_col_name, table_name)
         data_df = pd.read_sql_query(sql_query, self._conn, chunksize=chunksize)
         
         max_doc_len = 0
