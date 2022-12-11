@@ -145,7 +145,8 @@ if __name__ == '__main__':
         directory_path=output_emb_path,
         debug=debug
     )
-
+    
+    print('Embedding input documents...')
     for i, batch in enumerate(batched_data):
         # Split the current batch into chunks for multiprocessing.
         batched_doc = split_chunks(batch.loc[:, database_column_name], num_procs)
@@ -155,8 +156,9 @@ if __name__ == '__main__':
             # For each chunk, embed the data and save to a .npy file.
             grouped_embeddings = p.map(generate_matrix_partial, batched_doc)
             p.starmap(
-                save_embeddings_partial, 
-                zip(grouped_embeddings, batched_idx))
-    
+                save_embeddings_partial,
+                zip(grouped_embeddings, batched_idx)
+            )
+    print(f'Embedding completed. (Total number of batches: {i}).')
     print(f'Saved embedded text at output path: {output_emb_path}.')
 

@@ -3,7 +3,6 @@ This file contains the definition for `DatabaseHandler`,
 a class used to easily access data from a SQLite3 database.
 '''
 
-import chunk
 from typing import Callable, Iterable
 import sqlite3
 import pandas as pd
@@ -30,8 +29,7 @@ class DatabaseHandler():
         
         If `chunksize` is not `None`, a generator object is returned, with elements
         being `pd.DataFrame` objects.
-        Otherwise, this function will attempt to read all of the requested data into memory at once, returning
-        a `pd.DataFrame`.
+        Otherwise, this function will attempt to read all of the requested data into memory at once, returning a `pd.DataFrame`.
         
         Parameters:
         - `table_name`: name of the table to read from the SQLite3 database
