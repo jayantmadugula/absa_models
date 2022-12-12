@@ -82,3 +82,12 @@ class DataPreparationUnitTests(unittest.TestCase):
         assert(min(combined_res) == 0)
         assert((combined_res != np.sort(combined_res)).any())
 
+    def test_split_chunks(self):
+        data_list = [0, 1, 2, 3, 4, 5]
+        n = 3
+
+        res = list(dp.split_chunks(data_list, n))
+        assert(len(res) == 3)
+        assert(res[0] == [0, 1])
+        assert(res[1] == [2, 3])
+        assert(res[2] == [4, 5])
