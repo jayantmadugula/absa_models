@@ -90,7 +90,7 @@ if __name__ == '__main__':
     table_name = args.table_name
     database_column_name = args.data_column_name
     data_output_dir = args.output_dir_name if args.output_dir_name else table_name
-    embedding_target = args.emb_target # TODO: if not ngram, we need to find max length to standardize array shape
+    embedding_target = args.emb_target
     text_filtering_option = args.filtering_option
     debug = args.enable_debug
 
