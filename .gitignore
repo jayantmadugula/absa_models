@@ -134,3 +134,4 @@ dmypy.json
 # Project specific
 generated_embeddings/
 *.npy
+.DS_Store
