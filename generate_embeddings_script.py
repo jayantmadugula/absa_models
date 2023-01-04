@@ -143,7 +143,7 @@ if __name__ == '__main__':
     save_embeddings_partial = partial(
         save_embeddings,
         directory_path=output_emb_path,
-        debug=debug
+        dry_run=debug
     )
     
     print('Embedding input documents...')
