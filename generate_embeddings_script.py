@@ -160,5 +160,5 @@ if __name__ == '__main__':
                 zip(grouped_embeddings, batched_idx)
             )
     print(f'Embedding completed. (Total number of batches: {i}).')
-    print(f'Saved embedded text at output path: {output_emb_path}.')
+    print(f'Saved embedded text at output path: {output_emb_path}')
 
