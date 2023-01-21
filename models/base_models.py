@@ -6,6 +6,7 @@ All models implemented in this repository should inherit
 from one of the models defined here.
 '''
 from sklearn.svm import SVC
+from data_handling.data_generators import BaseNLPGenerator
 from tensorflow.keras.layers import Embedding
 import analysis.classifier_metrics as cm
 
@@ -212,7 +213,7 @@ class UnsupervisedDeepNeuralNetworkModel(BaseDeepNeuralNetwork):
 
         self._model = self._compile_model()
 
-    def train(self, in_data, e, callbacks=None, batch_generator=None):
+    def train(self, in_data, e, callbacks=None, batch_generator: BaseNLPGenerator = None):
         ''' 
         Trains a compiled Keras model.
 
