@@ -28,10 +28,9 @@ class SimpleABAE(UnsupervisedDeepNeuralNetworkModel):
     - https://github.com/luckmoon/Unsupervised-Aspect-Extraction/blob/master/code/
     '''
     def __init__(self, neg_size, win_size, emb_dim, output_size, optimizer='adam', loss='categorical_crossentropy', loss_weights=None):
-        super().__init__(win_size, emb_dim, output_size, optimizer=optimizer, loss=loss, loss_weights=loss_weights)
         self._neg_size = neg_size
 
-        self._model = self._compile_model()
+        super().__init__(win_size, emb_dim, output_size, optimizer=optimizer, loss=loss, loss_weights=loss_weights)
     
     def _ortho_reg(self, weight_matrix, ortho_reg=0.1):
     # orthogonal regularization for aspect embedding matrix
