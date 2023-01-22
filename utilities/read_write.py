@@ -29,6 +29,8 @@ def save_embeddings(
         print('[Debug] Save function received a list of embeddings' \
             + f' with length {len(embeddings_list)} and a list of ids' \
             + f' with length {len(ids_list)}. The write path is {directory_path}')
+
+        print(f'[Debug] Saving data with starting index: {list(ids_list)[0]}')
         return
 
     try:
