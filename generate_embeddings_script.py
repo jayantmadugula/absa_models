@@ -148,9 +148,11 @@ if __name__ == '__main__':
     
     print('Embedding input documents...')
     for i, batch in enumerate(batched_data):
+        adjusted_idx = batch.index + (i * batch_size)
+
         # Split the current batch into chunks for multiprocessing.
         batched_doc = split_chunks(batch.loc[:, database_column_name], num_procs)
-        batched_idx = split_chunks(batch.index, num_procs)
+        batched_idx = split_chunks(adjusted_idx, num_procs)
 
         with Pool(num_procs) as p:
             # For each chunk, embed the data and save to a .npy file.
@@ -159,6 +161,11 @@ if __name__ == '__main__':
                 save_embeddings_partial,
                 zip(grouped_embeddings, batched_idx)
             )
+        
+        print(f'Batch {i} complete.\n\tBatch starting index: {adjusted_idx[0]}\n\tBatch ending index: {adjusted_idx[-1]}\n')
+    
+    if debug: print(f'[DEBUG] Total number of rows in the database table: {db_handler.get_table_length(table_name)}')
+
     print(f'Embedding completed. (Total number of batches: {i}).')
     print(f'Saved embedded text at output path: {output_emb_path}')
 
