@@ -3,14 +3,23 @@ TEMP: The contents of this script should be moved to classes. Do NOT have a scri
 '''
 
 import os
-from database_utilities.database_handler import DatabaseHandler
 from data_handling.embedding_generation import generate_ngram_matrix
 from data_handling import data_loaders, data_generators
 from models.abae_models import SimpleABAE
 import numpy as np
+import argparse
+
+def setup_argparse():
+    parser = argparse.ArgumentParser(description='''
+        Trains an aspect-detection model based on an auto-encoder architecture.
+
+        This script supports a number of different models. For more information, run $ python train_absa_model_script --help
+        ''')
+    
+    parser.add_argument('')
 
 if __name__ == '__main__':
-    print('Starting the model_training_script')
+    print('Starting the train_absa_model_script.')
 
     # Set constants.
     DB_PATH = '../databases/corpus_database.db'
@@ -37,7 +46,6 @@ if __name__ == '__main__':
     db_table_name = f'restaurantreviews_n={n}'
     model_save_path = f'./TRAINED_MODEL'
 
-    # num_rows = DatabaseHandler(DB_PATH).get_table_length(db_table_name)
     num_rows = len([f for f in os.listdir(embs_dirpath) if f.endswith('.npy')])
     print(f'Found {num_rows} rows in the {db_table_name} table.\n')
 
