@@ -58,7 +58,7 @@ def setup_argparse() -> argparse.ArgumentParser:
         dest='output_dir_name',
         help='''
         If provided, the script places the embeddings into this directory; the resulting path
-        would be: ./output_directory_name/table_name/ngram_idx.npy
+        would be: ./<output_directory_name>/<table_name>/emb_<table_name>/ngram_idx.npy
 
         If not provided, the script will use the table name for the parent directory's name.
         '''
