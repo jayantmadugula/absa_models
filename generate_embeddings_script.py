@@ -105,7 +105,7 @@ if __name__ == '__main__':
     emb_root_path = params['input_data']['embedding_root_path']
     emb_type = PreTrainedEmbeddings.map_string(params['input_data']['embedding_type'])
     emb_dim = params['script_parameters']['embedding_dimension']
-    emb_output_dir = params['output_parameters']['embedding_output_root_dir']
+    emb_output_dir = params['generated_data']['embedding_output_root_dir']
 
     filter_arg = 'pos-filter' if text_filtering_option else None
 
