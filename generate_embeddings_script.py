@@ -98,7 +98,7 @@ if __name__ == '__main__':
     with open('./parameters.json') as params_fp:
         params = json.load(params_fp)
 
-    batch_size = params['script_parameters']['ngram_batch_size'] if embedding_target == 'ngram' else params['script_parameters']['document_batch_size']
+    batch_size = params['embedding_parameters']['ngram_batch_size'] if embedding_target == 'ngram' else params['embedding_parameters']['document_batch_size']
     num_procs = params['script_parameters']['num_processes']
 
     db_path = params['input_data']['database_path']

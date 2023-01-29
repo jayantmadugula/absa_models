@@ -12,8 +12,15 @@
     "script_parameters": 
     {
         "embedding_dimension": 200,
-        "num_processes": 16,
+        "num_processes": 16
+    },
+    "embedding_parameters":
+    {
         "ngram_batch_size": 1000000,
         "document_batch_size": 100000
+    },
+    "training_parameters":
+    {
+        "batch_size": 50000
     }
 }
