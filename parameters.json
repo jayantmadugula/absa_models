@@ -22,6 +22,6 @@
     },
     "training_parameters":
     {
-        "batch_size": 50000
+        "batch_size": 5000
     }
 }
