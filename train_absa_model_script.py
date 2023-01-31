@@ -5,7 +5,7 @@ TEMP: The contents of this script should be moved to classes. Do NOT have a scri
 from datetime import datetime
 import json
 import os
-from data_handling.embedding_generation import generate_ngram_matrix
+from typing import Dict
 from data_handling import data_loaders, data_generators
 from models.abae_models import SimpleABAE
 import numpy as np
@@ -64,13 +64,19 @@ def setup_argparse() -> argparse.ArgumentParser:
         help='The number of "classes", or aspects, in the model\'s output. This corresponds to the shape of the model\'s output layer.'
     )
 
-
     return parser
 
 def validate_arguments(args):
     ''' Additional validation for input arguments. '''
-    if args.ngram_size % 2 != 0:
+    if args.ngram_size % 2 == 0:
         raise ValueError('ngram_size must be an odd number')
+    
+def save_model_settings(args_dict: Dict, params_dict: Dict, model_save_path: str):
+    model_train_settings = {'script_args': args_dict, 'training_parameters': params_dict}
+    print(model_train_settings)
+    with open((settings_path := f'{model_save_path}/train_settings.json'), 'w') as fp:
+        json.dump(model_train_settings, fp)
+        print(f'Saved model training settings at path: {settings_path}')
 
 if __name__ == '__main__':
     print('Starting the train_absa_model_script.')
@@ -102,13 +108,15 @@ if __name__ == '__main__':
     num_aspects = args.number_of_aspects
     neg_size = batch_size
 
+    validate_arguments(args)
+
     print(f'\nParameters for training run:\n\tn: {n}\n\temb_dim: {emb_dim}\n\tbatch_size: {batch_size}\n\tepochs: {epochs}\n')
     print(f'\nParameters for the model:\n\tNumber of aspects: {num_aspects}\n\tNegative input size: {neg_size}\n')
 
     emb_data_dirpath = f'{generated_embeddings_dirpath}{dataset_name}_n_{n}/emb_{dataset_name}_n_{n}/'
     model_save_path = f'{output_model_dirpath}{dataset_name}_models/{datetime.now()}_{model_name}'
 
-    print(f'Fetching pre-embedded trainng data from path: {emb_data_dirpath}')
+    print(f'Fetching pre-embedded training data from path: {emb_data_dirpath}')
     print(f'Trained model will be saved to path: {model_save_path}')
 
     num_rows = len([f for f in os.listdir(emb_data_dirpath) if f.endswith('.npy')])
@@ -143,4 +151,5 @@ if __name__ == '__main__':
     )
 
     abae_model._model.save(model_save_path)
+    save_model_settings(vars(args), params_dict, model_save_path)
     print(f'Model training completed! The trained model has been saved to: {model_save_path}')
