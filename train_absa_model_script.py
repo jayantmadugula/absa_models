@@ -16,7 +16,7 @@ class SupportedAspectModels(Enum):
     SIMPLE_ABAE = 'SimpleABAE'
 
 class SupportedDatasets(Enum):
-    RESTAURANT_REVIEWS = 'restaurant_reviews'
+    RESTAURANT_REVIEWS = 'restaurantreviews'
 
 def setup_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='''
@@ -105,18 +105,18 @@ if __name__ == '__main__':
     print(f'\nParameters for training run:\n\tn: {n}\n\temb_dim: {emb_dim}\n\tbatch_size: {batch_size}\n\tepochs: {epochs}\n')
     print(f'\nParameters for the model:\n\tNumber of aspects: {num_aspects}\n\tNegative input size: {neg_size}\n')
 
-    embs_dirpath = f'{generated_embeddings_dirpath}{dataset_name}_n={n}/emb_{dataset_name}-n_{n}/'
+    emb_data_dirpath = f'{generated_embeddings_dirpath}{dataset_name}_n_{n}/emb_{dataset_name}_n_{n}/'
     model_save_path = f'{output_model_dirpath}{dataset_name}_models/{datetime.now()}_{model_name}'
 
-    print(f'Fetching pre-embedded trainng data from path: {embs_dirpath}')
+    print(f'Fetching pre-embedded trainng data from path: {emb_data_dirpath}')
     print(f'Trained model will be saved to path: {model_save_path}')
 
-    num_rows = len([f for f in os.listdir(embs_dirpath) if f.endswith('.npy')])
-    print(f'\nFound {num_rows} rows in dataset at {embs_dirpath}.')
+    num_rows = len([f for f in os.listdir(emb_data_dirpath) if f.endswith('.npy')])
+    print(f'\nFound {num_rows} rows in dataset at {emb_data_dirpath}.')
 
     # Set up data loading for model training.
     emb_data_loader = data_loaders.EmbeddedDataLoader(
-        data_path=embs_dirpath, 
+        data_path=emb_data_dirpath, 
         embedding_dim=emb_dim, 
         n=n, 
         metadata=None, 
