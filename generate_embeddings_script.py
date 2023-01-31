@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
     # Embed the data.
     output_emb_path = f'{emb_output_dir}/{data_output_dir}/emb_{table_name}/'
-    output_emb_path = output_emb_path.replace('//', '/')
+    output_emb_path = output_emb_path.replace('//', '/').replace('=', '_')
 
     generate_matrix_partial = partial(
         generate_ngram_matrix,
