@@ -58,7 +58,7 @@ def setup_argparse() -> argparse.ArgumentParser:
         dest='output_dir_name',
         help='''
         If provided, the script places the embeddings into this directory; the resulting path
-        would be: ./output_directory_name/table_name/ngram_idx.npy
+        would be: ./<output_directory_name>/<table_name>/emb_<table_name>/ngram_idx.npy
 
         If not provided, the script will use the table name for the parent directory's name.
         '''
@@ -98,14 +98,14 @@ if __name__ == '__main__':
     with open('./parameters.json') as params_fp:
         params = json.load(params_fp)
 
-    batch_size = params['ngram_batch_size'] if embedding_target == 'ngram' else params['document_batch_size']
-    num_procs = params['num_processes']
+    batch_size = params['embedding_parameters']['ngram_batch_size'] if embedding_target == 'ngram' else params['embedding_parameters']['document_batch_size']
+    num_procs = params['script_parameters']['num_processes']
 
-    db_path = params['database_path']
-    emb_root_path = params['embedding_root_path']
-    emb_type = PreTrainedEmbeddings.map_string(params['embedding_type'])
-    emb_dim = params['embedding_dimension']
-    emb_output_dir = params['embedding_output_root_dir']
+    db_path = params['input_data']['database_path']
+    emb_root_path = params['input_data']['embedding_root_path']
+    emb_type = PreTrainedEmbeddings.map_string(params['input_data']['embedding_type'])
+    emb_dim = params['script_parameters']['embedding_dimension']
+    emb_output_dir = params['generated_data']['embedding_output_root_dir']
 
     filter_arg = 'pos-filter' if text_filtering_option else None
 
@@ -125,11 +125,11 @@ if __name__ == '__main__':
         retry=True
     )
     print(f'Read data from database using {batch_size} element batches from {table_name}.')
-    if debug: print(type(batched_data))
+    if debug: print(f'[DEBUG] Type of batched_data: {type(batched_data)}')
 
     # Embed the data.
     output_emb_path = f'{emb_output_dir}/{data_output_dir}/emb_{table_name}/'
-    output_emb_path = output_emb_path.replace('//', '/')
+    output_emb_path = output_emb_path.replace('//', '/').replace('=', '_')
 
     generate_matrix_partial = partial(
         generate_ngram_matrix,
