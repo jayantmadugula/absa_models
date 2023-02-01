@@ -11,6 +11,7 @@ from tensorflow.keras.layers import Input, Dense, Activation, Concatenate, Atten
 from tensorflow.keras.layers import Average as k_Average
 from tensorflow.keras import Model
 import tensorflow.keras.backend as K
+from tensorflow.keras.models import load_model
 from tensorflow import eye as tf_eye
 import numpy as np
 
@@ -89,6 +90,19 @@ class SimpleABAE(UnsupervisedDeepNeuralNetworkModel):
         model.compile(optimizer=self._optimizer, loss=SimpleABAE.max_margin_loss, metrics=[SimpleABAE.max_margin_loss])
 
         return model
+    
+    @classmethod
+    def load_model(cls, model_path):
+        custom_layers = {
+            'Average': Average,
+            'Attention_ABAE': Attention_ABAE,
+            'WeightedSum': WeightedSum,
+            'WeightedAspectEmb': WeightedAspectEmb,
+            'MaxMargin': MaxMargin,
+            'max_margin_loss': cls.max_margin_loss
+        }
+
+        return load_model(model_path, custom_objects=custom_layers)
 
     def get_aspect_embedding_weights(self):
         return self._model.get_layer('aspect_emb').get_weights()[0]
