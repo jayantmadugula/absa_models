@@ -14,6 +14,11 @@ from enum import Enum
 
 class SupportedAspectModels(Enum):
     SIMPLE_ABAE = 'SimpleABAE'
+    NEW_ABAE = 'New_ABAE'
+    ABAE_T = 'ABAE_T'
+    ABAE_O = 'ABAE_O'
+    ABAE_A = 'ABAE_A'
+    ABAE_ALSTM = 'ABAE_ALSTM'
 
 class SupportedDatasets(Enum):
     RESTAURANT_REVIEWS = 'restaurantreviews'
@@ -78,6 +83,35 @@ def save_model_settings(args_dict: Dict, params_dict: Dict, model_save_path: str
         json.dump(model_train_settings, fp)
         print(f'Saved model training settings at path: {settings_path}')
 
+def determine_metadata(model_type: SupportedAspectModels, dataset_type: SupportedDatasets):
+    '''
+    Returns the tuple `(metadata, is_metadata_copied)`.
+
+    `metadata` can be `None`, an Iterable, or a filepath.
+    
+    `is_metadata_copied` is a boolean.
+    '''
+    match (model_type, dataset_type):
+        case (SupportedAspectModels.SIMPLE_ABAE, _) | (SupportedAspectModels.NEW_ABAE, _):
+            return (None, True)
+        case _:
+            raise ValueError('Invalid model_type and dataset_type combination (for now, at least).')
+        
+def create_model(model_type: SupportedAspectModels, **kwargs):
+    valid_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+    match model_type:
+        case SupportedAspectModels.SIMPLE_ABAE:
+            print('Building and training the NLP model.')
+            model = SimpleABAE(**valid_kwargs)
+            model._model.summary()
+            print()
+
+            return model
+        case SupportedAspectModels.NEW_ABAE:
+            raise ValueError(f'Model of type {model_type} is not yet implemented.')
+        case _:
+            raise ValueError(f'Model of type {model_type} is not yet implemented.')
+
 if __name__ == '__main__':
     print('Starting the train_absa_model_script.')
 
@@ -90,7 +124,7 @@ if __name__ == '__main__':
         params_dict = json.load(fp)
 
     # Get data information.
-    dataset_name = args.dataset_name
+    dataset_type = SupportedDatasets(args.dataset_name)
     generated_embeddings_dirpath = params_dict['generated_data']['embedding_output_root_dir']
     output_model_dirpath = params_dict['generated_data']['trained_model_output_root_dir']
 
@@ -98,7 +132,7 @@ if __name__ == '__main__':
     num_procs = params_dict['script_parameters']['num_processes']
 
     # Set model parameters.
-    model_name = args.model
+    model_type = SupportedAspectModels(args.model)
     emb_dim = params_dict['script_parameters']['embedding_dimension']
     batch_size = params_dict['training_parameters']['batch_size']
     
@@ -113,8 +147,9 @@ if __name__ == '__main__':
     print(f'\nParameters for training run:\n\tn: {n}\n\temb_dim: {emb_dim}\n\tbatch_size: {batch_size}\n\tepochs: {epochs}\n')
     print(f'\nParameters for the model:\n\tNumber of aspects: {num_aspects}\n\tNegative input size: {neg_size}\n')
 
-    emb_data_dirpath = f'{generated_embeddings_dirpath}{dataset_name}_n_{n}/emb_{dataset_name}_n_{n}/'
-    model_save_path = f'{output_model_dirpath}{dataset_name}_models/{datetime.now()}_{model_name}'
+    # Set computed parameters and data paths for training.
+    emb_data_dirpath = f'{generated_embeddings_dirpath}{dataset_type.value}_n_{n}/emb_{dataset_type.value}_n_{n}/'
+    model_save_path = f'{output_model_dirpath}{dataset_type.value}_models/{datetime.now()}_{model_type.value}'
 
     print(f'Fetching pre-embedded training data from path: {emb_data_dirpath}')
     print(f'Trained model will be saved to path: {model_save_path}')
@@ -122,13 +157,20 @@ if __name__ == '__main__':
     num_rows = len([f for f in os.listdir(emb_data_dirpath) if f.endswith('.npy')])
     print(f'\nFound {num_rows} rows in dataset at {emb_data_dirpath}.')
 
+    metadata, metadata_copied = determine_metadata(model_type, dataset_type)
+    if metadata is not None: print('Additional metadata included in model training.')
+    else: print('No metadata used for model training.')
+
+    target_input_size = None
+
     # Set up data loading for model training.
     emb_data_loader = data_loaders.EmbeddedDataLoader(
         data_path=emb_data_dirpath, 
         embedding_dim=emb_dim, 
         n=n, 
-        metadata=None, 
-        n_procs=num_procs
+        metadata=metadata, 
+        n_procs=num_procs,
+        is_metadata_copied=metadata_copied
     )
     data_generator = data_generators.SimpleABAEGenerator(
         data_loader=emb_data_loader, 
@@ -139,17 +181,21 @@ if __name__ == '__main__':
     )
 
     # Build and train the model.
-    print('Building and training the NLP model.')
-    abae_model = SimpleABAE(neg_size=neg_size, win_size=window_len, emb_dim=emb_dim, output_size=num_aspects)
-    abae_model._model.summary()
-    print()
+    aspect_model = create_model(
+        model_type,
+        neg_size=neg_size, 
+        win_size=window_len,
+        emb_dim=emb_dim, 
+        output_size=num_aspects,
+        target_input_size=target_input_size
+    )
 
-    abae_model.train(
+    aspect_model.train(
         in_data=None,
         e=epochs,
         batch_generator=data_generator
     )
 
-    abae_model._model.save(model_save_path)
+    aspect_model._model.save(model_save_path)
     save_model_settings(vars(args), params_dict, model_save_path)
     print(f'Model training completed! The trained model has been saved to: {model_save_path}')
