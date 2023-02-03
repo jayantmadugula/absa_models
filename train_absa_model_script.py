@@ -7,7 +7,7 @@ import json
 import os
 from typing import Dict
 from data_handling import data_loaders, data_generators
-from models.abae_models import SimpleABAE
+from models.abae_models import New_ABAE, SimpleABAE
 import numpy as np
 import argparse
 from enum import Enum
@@ -69,6 +69,15 @@ def setup_argparse() -> argparse.ArgumentParser:
         help='The number of "classes", or aspects, in the model\'s output. This corresponds to the shape of the model\'s output layer.'
     )
 
+    parser.add_argument(
+        '-d',
+        '--debug',
+        type=bool,
+        default=False,
+        required=False,
+        help='If true, no model is trained.'
+    )
+
     return parser
 
 def validate_arguments(args):
@@ -99,18 +108,18 @@ def determine_metadata(model_type: SupportedAspectModels, dataset_type: Supporte
         
 def create_model(model_type: SupportedAspectModels, **kwargs):
     valid_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+    print(f'Building and training a {model_type.value} model.')
+
     match model_type:
         case SupportedAspectModels.SIMPLE_ABAE:
-            print('Building and training the NLP model.')
             model = SimpleABAE(**valid_kwargs)
-            model._model.summary()
-            print()
-
-            return model
         case SupportedAspectModels.NEW_ABAE:
-            raise ValueError(f'Model of type {model_type} is not yet implemented.')
+            model = New_ABAE(**valid_kwargs)
         case _:
             raise ValueError(f'Model of type {model_type} is not yet implemented.')
+        
+    model._model.summary()
+    return model
 
 if __name__ == '__main__':
     print('Starting the train_absa_model_script.')
@@ -189,13 +198,17 @@ if __name__ == '__main__':
         output_size=num_aspects,
         target_input_size=target_input_size
     )
+    
+    if not args.debug:
+        aspect_model.train(
+            in_data=None,
+            e=epochs,
+            batch_generator=data_generator
+        )
 
-    aspect_model.train(
-        in_data=None,
-        e=epochs,
-        batch_generator=data_generator
-    )
+        aspect_model._model.save(model_save_path)
+        save_model_settings(vars(args), params_dict, model_save_path)
+        print(f'Model training completed! The trained model has been saved to: {model_save_path}')
 
-    aspect_model._model.save(model_save_path)
-    save_model_settings(vars(args), params_dict, model_save_path)
-    print(f'Model training completed! The trained model has been saved to: {model_save_path}')
+    else:
+        print(f'Debug enabled, so no model is trained. Model save path: {model_save_path}')
