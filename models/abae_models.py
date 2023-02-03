@@ -7,7 +7,7 @@ from tensorflow.python.keras.layers.dense_attention import Attention
 from models.base_models import UnsupervisedDeepNeuralNetworkModel
 from model_helpers.custom_layers import *
 
-from tensorflow.keras.layers import Input, Dense, Activation, Concatenate, Attention, LSTM
+from tensorflow.keras.layers import Input, Dense, Activation, Concatenate, Attention, LSTM, GlobalAveragePooling1D
 from tensorflow.keras.layers import Average as k_Average
 from tensorflow.keras import Model
 import tensorflow.keras.backend as K
@@ -142,7 +142,8 @@ class New_ABAE(SimpleABAE):
         # e_w = word_emb(sentence_input)
         y_s = Average(name='sentence_avg')(emb_input)
         att_weights = Attention(name='att')([emb_input, y_s])
-        z_s = WeightedSum()([emb_input, att_weights])
+        pooled_weights = GlobalAveragePooling1D(name='pool', data_format='channels_first')(att_weights) #TODO: investigate max pooling
+        z_s = WeightedSum()([emb_input, pooled_weights])
 
         # Compute representations of negative instances
         # e_neg = word_emb(neg_input)
