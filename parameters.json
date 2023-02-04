@@ -13,7 +13,7 @@
     "script_parameters": 
     {
         "embedding_dimension": 200,
-        "num_processes": 16
+        "num_processes": 30
     },
     "embedding_parameters":
     {
@@ -22,6 +22,6 @@
     },
     "training_parameters":
     {
-        "batch_size": 5000
+        "batch_size": 7500
     }
 }
