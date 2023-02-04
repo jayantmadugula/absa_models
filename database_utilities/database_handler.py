@@ -45,19 +45,19 @@ class DatabaseHandler():
             table_name = f'"{table_name}"'
 
             if columns is not None:
-                columns = [f'"{c}"' for c in columns]
-                if index_column_name not in columns:
-                    columns = f'"{index_column_name}", {", ".join(columns)}'
+                if index_column_name and index_column_name not in columns:
+                    columns.append(index_column_name)
+                columns = ','.join([f'"{c}"' for c in columns])
                 sql_query = f'SELECT {columns} FROM {table_name}'
-                print(sql_query)
             else: 
                 sql_query = 'SELECT * FROM {}'.format(table_name)
             if row_indices is not None:
-                sql_query += ' WHERE {} IN {}'.format(index_column_name, tuple(row_indices))
+                _index_column_name = index_column_name if index_column_name else '"index"'
+                sql_query += ' WHERE {} IN {}'.format(_index_column_name, tuple(row_indices))
 
             if index_column_name is not None:
                 sql_query += f' ORDER BY "{index_column_name}" ASC'
-
+                
             data = pd.read_sql_query(sql_query, self._conn, index_col=index_column_name, chunksize=chunksize)
         except Exception as e:
             if retry:
