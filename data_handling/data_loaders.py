@@ -3,10 +3,11 @@ The classes in this file are responsible for enabling batch loading
 of data from various sources.
 '''
 
-from typing import Generator, Iterable, Tuple
+from typing import Generator, Iterable, List, Tuple
 from multiprocessing import Pool
 import numpy as np
 from scipy.sparse.csr import csr_matrix
+from database_utilities.database_handler import DatabaseHandler
 
 
 class BaseDataLoader():
@@ -139,6 +140,30 @@ class PreSavedDataLoader(BaseDataLoader):
             metadata = np.load(self._metadata, mmap_mode='r')
             return metadata[idx_range]
 
+class SqliteDataLoader(BaseDataLoader):
+    '''
+    Loads data directly from a Sqlite3 database.
+    '''
+    def __init__(self, database_path, table_name, data_column_name, vectorizer=None):
+        self._db_handler = DatabaseHandler(database_path)
+        self._table_name = table_name
+        self._data_column_name = data_column_name
+        self._vectorizer = vectorizer
+
+    def read(self, idx_range: Iterable[int]) -> np.ndarray | List[str]:
+        '''
+        Reads data from the connected SQlite3 database.
+        '''
+        data = self._db_handler.read(
+            self._table_name,
+            row_indices=idx_range,
+            columns=[self._data_column_name]
+        )[self._data_column_name].tolist()
+
+        return self._vectorizer(data) if self._vectorizer else data
+    
+    def read_metadata(self, idx_range) -> np.ndarray:
+        return super().read_metadata(idx_range)
 
 class LabeledDataLoader(BaseDataLoader):
     '''
