@@ -7,11 +7,12 @@ from tensorflow.python.keras.layers.dense_attention import Attention
 from models.base_models import UnsupervisedDeepNeuralNetworkModel
 from model_helpers.custom_layers import *
 
-from tensorflow.keras.layers import Input, Dense, Activation, Concatenate, Attention, LSTM, GlobalAveragePooling1D
+from tensorflow.keras.layers import Input, Dense, Activation, Concatenate, Attention, LSTM, GlobalAveragePooling1D, Embedding
 from tensorflow.keras.layers import Average as k_Average
 from tensorflow.keras import Model
 import tensorflow.keras.backend as K
 from tensorflow.keras.models import load_model
+from tensorflow.keras.initializers import Constant
 from tensorflow import eye as tf_eye
 import numpy as np
 
@@ -127,6 +128,65 @@ class SimpleABAE(UnsupervisedDeepNeuralNetworkModel):
         softmax_model = Model(input_layers, softmax_layer)
 
         return softmax_model
+    
+class SimpleABAE_Emb(SimpleABAE):
+    def __init__(
+        self,
+        num_tokens,
+        emb_matrix,
+        neg_size, 
+        win_size, 
+        emb_dim, 
+        output_size, 
+        optimizer='adam', 
+        loss='categorical_crossentropy', 
+        loss_weights=None,
+        trainable_emb_layer=False
+    ):
+        self._embedding_layer = self._create_embedding_layer(num_tokens, emb_dim, emb_matrix, trainable_emb_layer)
+        super().__init__(neg_size, win_size, emb_dim, output_size, optimizer=optimizer, loss=loss, loss_weights=loss_weights)
+        
+    def _create_embedding_layer(self, num_tokens, emb_dim, emb_matrix, trainable_emb_layer):
+        return Embedding(
+            num_tokens,
+            emb_dim,
+            embeddings_initializer=Constant(emb_matrix),
+            trainable=trainable_emb_layer
+        )
+    
+    def _compile_model(self):
+        maxlen = self._n
+        aspect_size = self._output_size
+        
+        # Embedding layers
+        embedding_layer = self._embedding_layer
+        
+        # Inputs
+        emb_input = Input(shape=(maxlen,), dtype='float32', name='sentence_input')
+        neg_input = Input(shape=(maxlen,), dtype='float32', name='neg_input')
+
+        # Compute sentence representation
+        pos_emb = embedding_layer(emb_input)
+        y_s = Average(name='sentence_avg')(pos_emb)
+        att_weights = Attention_ABAE(name='att')([pos_emb, y_s])
+        z_s = WeightedSum()([pos_emb, att_weights])
+
+        # Compute representations of negative instances
+        neg_emb = embedding_layer(neg_input)
+        z_n = Average()(neg_emb)
+
+        # Reconstruction
+        p_t = Dense(aspect_size)(z_s)
+        p_t = Activation('softmax', name='p_t')(p_t)
+        r_s = WeightedAspectEmb(aspect_size, self._emb_dim, name='aspect_emb',
+                                W_regularizer=self._ortho_reg)(p_t)
+
+        # Loss
+        loss = MaxMargin(neg_size=self._neg_size, name='max_margin')([z_s, z_n, r_s])
+        model = Model(inputs=[emb_input, neg_input], outputs=loss)
+        model.compile(optimizer=self._optimizer, loss=SimpleABAE.max_margin_loss, metrics=[SimpleABAE.max_margin_loss])
+
+        return model
 
 class New_ABAE(SimpleABAE):
     ''' This class mimics the ABAE architecture, but uses a standard Keras Attention layer. '''
