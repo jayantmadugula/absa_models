@@ -8,6 +8,7 @@ from enum import Enum
 from typing import Callable, Dict, Iterable
 import numpy as np
 import pandas as pd
+from tensorflow.keras.layers import TextVectorization
 
 
 class PreTrainedEmbeddings(Enum):
@@ -152,6 +153,36 @@ def generate_ngram_matrix(
     
     return np.stack(line_vecs)
 
+def generate_vocabulary_matrix(
+        trained_vectorizer: TextVectorization,
+        num_tokens: int,
+        embedding_type: PreTrainedEmbeddings,
+        embedding_rootpath: str,
+        embedding_dimension: int
+    ):
+    '''
+    Given a `word_index`, which should come from `TextVectorizer.word_index`, returns a
+    dictionary mapping each word to it's embedded representation.
+
+    Docs: https://keras.io/examples/nlp/pretrained_word_embeddings/
+    '''
+    word_index = dict(zip(trained_vectorizer.get_vocabulary(), range(num_tokens-2)))
+
+    emb_filepath = _build_pretrained_embedding_filepath(
+        embedding_rootpath, 
+        embedding_type, 
+        embedding_dimension=embedding_dimension)
+    f = open(emb_filepath)
+    emb_dict = _build_pretrained_embedding(f)
+
+    embedding_matrix = np.zeros((num_tokens, embedding_dimension))
+    for word, i in word_index.items():
+        embedding_vector = emb_dict.get(word)
+        if embedding_vector is not None:
+            embedding_matrix[i] = embedding_vector
+
+    return embedding_matrix
+
 def flatten_sentence_vectors(word_matrix: np.ndarray) -> np.ndarray:
     '''
     Creates a flattened 1D vector per sentence, with 
@@ -185,6 +216,22 @@ def check_embedding(text: str, text_embedding: np.ndarray, emb_dict: Dict[str, n
     for word, word_emb in zip(text.split(), text_embedding):
         if (emb_dict[word] != word_emb).all(): return False
     return True
+
+def create_keras_vectorizer(batched_texts: Iterable[Iterable[str]], max_document_length: int):
+    '''
+    Returns a `TextVectorizer` object with a vocabulary covering all unique words in `texts`.
+
+    Currently, this function assumes `texts` contains batched data.
+    
+    `max_document_length` is the maximum number of words in a single document contained in `texts`.
+    '''
+    print('\nCreating a Keras TextVectorization object...')
+    unique_words = set()
+    for batch in batched_texts:
+        for e in batch:
+            [unique_words.add(w) for w in e.split(' ')]
+
+    return TextVectorization(output_sequence_length=max_document_length, vocabulary=list(unique_words))
 
 def _embed_phrase(
     phrase: str, 

@@ -11,7 +11,6 @@ from database_utilities.database_handler import DatabaseHandler
 from models.abae_models import New_ABAE, SimpleABAE, SimpleABAE_Emb
 from data_handling.document_tokenizers import simple_tokenizer
 from data_handling import embedding_generation as eg
-from tensorflow.keras.layers import TextVectorization
 import numpy as np
 import argparse
 from enum import Enum
@@ -125,7 +124,7 @@ def determine_metadata(model_type: SupportedAspectModels, dataset_type: Supporte
             return (None, True)
         case _:
             raise ValueError('Invalid model_type and dataset_type combination (for now, at least).')
-        
+
 def create_model(model_type: SupportedAspectModels, use_emb_data: bool, **kwargs):
     valid_kwargs = {k: v for k, v in kwargs.items() if v is not None}
     print(f'Building and training a {model_type.value} model.')
@@ -162,13 +161,17 @@ if __name__ == '__main__':
     # Set script parameters.
     num_procs = params_dict['script_parameters']['num_processes']
 
+    # Set data parameters.
+    db_path = params_dict['input_data']['database_path']
+    emb_root_path = params_dict['input_data']['embedding_root_path']
+    max_tokens = params_dict['training_parameters']['max_tokens']
+
     # Set model parameters.
     model_type = SupportedAspectModels(args.model)
     use_emb_data = args.use_embedded_data
     train_emb_layer = args.enable_embedding_training if not use_emb_data else None
     emb_dim = params_dict['script_parameters']['embedding_dimension']
     batch_size = params_dict['training_parameters']['batch_size']
-    db_path = params_dict['input_data']['database_path']
     
     window_len = args.ngram_size
     n = int((window_len - 1) / 2)
@@ -184,6 +187,7 @@ if __name__ == '__main__':
     # Set computed parameters and data paths for training.
     emb_data_dirpath = f'{generated_embeddings_dirpath}{dataset_type.value}_n_{n}/emb_{dataset_type.value}_n_{n}/'
     model_save_path = f'{output_model_dirpath}{dataset_type.value}_models/{datetime.now()}_{model_type.value}'
+    model_save_path = model_save_path if use_emb_data else model_save_path + '_Emb'
 
     print(f'Fetching pre-embedded training data from path: {emb_data_dirpath}')
     print(f'Trained model will be saved to path: {model_save_path}')
@@ -195,65 +199,59 @@ if __name__ == '__main__':
     if metadata is not None: print('Additional metadata included in model training.')
     else: print('No metadata used for model training.')
 
+    # Training parameters. These are not always required.
     target_input_size = None
+    num_tokens = None
+    embedding_matrix = None
 
     # Set up data loading for model training.
-    num_tokens = None
-    emb_matrix = None
-    if use_emb_data:
-        data_loader = data_loaders.EmbeddedDataLoader(
-            data_path=emb_data_dirpath, 
-            embedding_dim=emb_dim, 
-            n=n, 
-            metadata=metadata, 
-            n_procs=num_procs,
-            is_metadata_copied=metadata_copied
-        )
-    else:
-        # TODO: refactor
-        db_table_name = f'{dataset_type.value}_n={n}'
-        database_column_name = 'ngram' #TODO parameterize
-        
-        db_handler = DatabaseHandler(db_path)
-        max_doc_len = db_handler.get_longest_document_length(
-            db_table_name, 
-            database_column_name,
-            simple_tokenizer,
-            batch_size)
-        data_gen = lambda: (batch['ngram'].tolist() for batch in db_handler.read(
-            db_table_name,
-            chunksize=batch_size,
-            retry=True
-        ))
-        unique_words = set()
-        for batch in data_gen():
-            for e in batch:
-                for w in e.split(' '):
-                    unique_words.add(w)
+    match model_type, use_emb_data:
+        case _, True:
+            # Using pre-saved & embedded data.
+            data_loader = data_loaders.EmbeddedDataLoader(
+                data_path=emb_data_dirpath, 
+                embedding_dim=emb_dim, 
+                n=n, 
+                metadata=metadata, 
+                n_procs=num_procs,
+                is_metadata_copied=metadata_copied
+            )
+        case SupportedAspectModels.SIMPLE_ABAE, False:
+            # Get required values for vectorization & embedding.
+            db_table_name = f'{dataset_type.value}_n={n}'
+            database_column_name = 'ngram' #TODO parameterize
 
-        vectorizer = TextVectorization(output_sequence_length=max_doc_len, vocabulary=list(unique_words))
-        
-        data_loader = data_loaders.SqliteDataLoader(
-            database_path=db_path,
-            table_name=db_table_name,
-            data_column_name=database_column_name,
-            vectorizer=vectorizer
-        )
+            data_gen = lambda: (batch[database_column_name].tolist() for batch in db_handler.read(
+                db_table_name,
+                chunksize=batch_size, 
+            ))
+            
+            db_handler = DatabaseHandler(db_path)
+            max_doc_len = db_handler.get_longest_document_length(
+                db_table_name, 
+                database_column_name,
+                simple_tokenizer,
+                batch_size)
 
-        num_tokens = len(vectorizer.get_vocabulary()) + 2
-        word_index = dict(zip(vectorizer.get_vocabulary(), range(num_tokens-2)))
+            # Generate a vocabulary for the dataset and build embedding matrix.
+            vectorizer = eg.create_keras_vectorizer(data_gen(), max_doc_len)
+            num_tokens = len(vectorizer.get_vocabulary()) + 2
+            embedding_matrix = eg.generate_vocabulary_matrix(
+                vectorizer,
+                num_tokens,
+                eg.PreTrainedEmbeddings.GLOVE,
+                emb_root_path,
+                emb_dim
+            )
 
-        emb_filepath = eg._build_pretrained_embedding_filepath('../datasets/embedding_data/', eg.PreTrainedEmbeddings.GLOVE, embedding_dimension=200)
-        emb_file = open(emb_filepath)
-        emb_dict = eg._build_pretrained_embedding(emb_file)
-        embedding_matrix = np.zeros((num_tokens, emb_dim))
-        for word, i in word_index.items():
-            embedding_vector = emb_dict.get(word)
-            if embedding_vector is not None:
-                # Words not found in embedding index will be all-zeros.
-                # This includes the representation for "padding" and "OOV"
-                embedding_matrix[i] = embedding_vector
-        del vectorizer, unique_words, emb_dict
+            # Create data loader object.
+            data_loader = data_loaders.SqliteDataLoader(
+                database_path=db_path,
+                table_name=db_table_name,
+                data_column_name=database_column_name,
+                vectorizer=vectorizer
+            )
+
     data_generator = data_generators.SimpleABAEGenerator(
         data_loader=data_loader, 
         indices=np.arange(num_rows),
