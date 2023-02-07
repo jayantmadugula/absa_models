@@ -7,7 +7,11 @@ import json
 import os
 from typing import Dict
 from data_handling import data_loaders, data_generators
-from models.abae_models import New_ABAE, SimpleABAE
+from database_utilities.database_handler import DatabaseHandler
+from models.abae_models import New_ABAE, SimpleABAE, SimpleABAE_Emb
+from data_handling.document_tokenizers import simple_tokenizer
+from data_handling import embedding_generation as eg
+from tensorflow.keras.layers import TextVectorization
 import numpy as np
 import argparse
 from enum import Enum
@@ -61,6 +65,22 @@ def setup_argparse() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--use_embedded_data',
+        type=bool,
+        default=False,
+        required=False,
+        help='If True, the model will use pre-embedded training data instead of relying on a Keras Embedding layer. Both scenarios use GloVe embeddings.'
+    )
+
+    parser.add_argument(
+        '--enable_embedding_training',
+        type=bool,
+        default=False,
+        required=False,
+        help='If True, the Keras Embedding layer will not be frozen during training. Only works when --use_embedded_data is False.'
+    )
+
+    parser.add_argument(
         '-a',
         '--number_of_aspects',
         type=int,
@@ -106,13 +126,15 @@ def determine_metadata(model_type: SupportedAspectModels, dataset_type: Supporte
         case _:
             raise ValueError('Invalid model_type and dataset_type combination (for now, at least).')
         
-def create_model(model_type: SupportedAspectModels, **kwargs):
+def create_model(model_type: SupportedAspectModels, use_emb_data: bool, **kwargs):
     valid_kwargs = {k: v for k, v in kwargs.items() if v is not None}
     print(f'Building and training a {model_type.value} model.')
 
-    match model_type:
-        case SupportedAspectModels.SIMPLE_ABAE:
+    match model_type, use_emb_data:
+        case SupportedAspectModels.SIMPLE_ABAE, True:
             model = SimpleABAE(**valid_kwargs)
+        case SupportedAspectModels.SIMPLE_ABAE, False:
+            model = SimpleABAE_Emb(**valid_kwargs)
         case SupportedAspectModels.NEW_ABAE:
             model = New_ABAE(**valid_kwargs)
         case _:
@@ -142,8 +164,11 @@ if __name__ == '__main__':
 
     # Set model parameters.
     model_type = SupportedAspectModels(args.model)
+    use_emb_data = args.use_embedded_data
+    train_emb_layer = args.enable_embedding_training if not use_emb_data else None
     emb_dim = params_dict['script_parameters']['embedding_dimension']
     batch_size = params_dict['training_parameters']['batch_size']
+    db_path = params_dict['input_data']['database_path']
     
     window_len = args.ngram_size
     n = int((window_len - 1) / 2)
@@ -173,16 +198,64 @@ if __name__ == '__main__':
     target_input_size = None
 
     # Set up data loading for model training.
-    emb_data_loader = data_loaders.EmbeddedDataLoader(
-        data_path=emb_data_dirpath, 
-        embedding_dim=emb_dim, 
-        n=n, 
-        metadata=metadata, 
-        n_procs=num_procs,
-        is_metadata_copied=metadata_copied
-    )
+    num_tokens = None
+    emb_matrix = None
+    if use_emb_data:
+        data_loader = data_loaders.EmbeddedDataLoader(
+            data_path=emb_data_dirpath, 
+            embedding_dim=emb_dim, 
+            n=n, 
+            metadata=metadata, 
+            n_procs=num_procs,
+            is_metadata_copied=metadata_copied
+        )
+    else:
+        # TODO: refactor
+        db_table_name = f'{dataset_type.value}_n={n}'
+        database_column_name = 'ngram' #TODO parameterize
+        
+        db_handler = DatabaseHandler(db_path)
+        max_doc_len = db_handler.get_longest_document_length(
+            db_table_name, 
+            database_column_name,
+            simple_tokenizer,
+            batch_size)
+        data_gen = lambda: (batch['ngram'].tolist() for batch in db_handler.read(
+            db_table_name,
+            chunksize=batch_size,
+            retry=True
+        ))
+        unique_words = set()
+        for batch in data_gen():
+            for e in batch:
+                for w in e.split(' '):
+                    unique_words.add(w)
+
+        vectorizer = TextVectorization(output_sequence_length=max_doc_len, vocabulary=list(unique_words))
+        
+        data_loader = data_loaders.SqliteDataLoader(
+            database_path=db_path,
+            table_name=db_table_name,
+            data_column_name=database_column_name,
+            vectorizer=vectorizer
+        )
+
+        num_tokens = len(vectorizer.get_vocabulary()) + 2
+        word_index = dict(zip(vectorizer.get_vocabulary(), range(num_tokens-2)))
+
+        emb_filepath = eg._build_pretrained_embedding_filepath('../datasets/embedding_data/', eg.PreTrainedEmbeddings.GLOVE, embedding_dimension=200)
+        emb_file = open(emb_filepath)
+        emb_dict = eg._build_pretrained_embedding(emb_file)
+        embedding_matrix = np.zeros((num_tokens, emb_dim))
+        for word, i in word_index.items():
+            embedding_vector = emb_dict.get(word)
+            if embedding_vector is not None:
+                # Words not found in embedding index will be all-zeros.
+                # This includes the representation for "padding" and "OOV"
+                embedding_matrix[i] = embedding_vector
+        del vectorizer, unique_words, emb_dict
     data_generator = data_generators.SimpleABAEGenerator(
-        data_loader=emb_data_loader, 
+        data_loader=data_loader, 
         indices=np.arange(num_rows),
         batch_size=batch_size,
         ngram_len=window_len,
@@ -192,11 +265,15 @@ if __name__ == '__main__':
     # Build and train the model.
     aspect_model = create_model(
         model_type,
+        use_emb_data,
+        num_tokens=num_tokens,
+        emb_matrix=embedding_matrix,
         neg_size=neg_size, 
         win_size=window_len,
         emb_dim=emb_dim, 
         output_size=num_aspects,
-        target_input_size=target_input_size
+        target_input_size=target_input_size,
+        trainable_emb_layer=train_emb_layer
     )
     
     if not args.debug:
