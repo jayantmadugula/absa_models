@@ -19,6 +19,35 @@ class BaseDataLoader():
 
     def read_metadata(self, idx_range) -> np.ndarray:
         raise NotImplementedError()
+    
+class InMemoryDataLoader(BaseDataLoader):
+    '''
+    A simple DataLoader that holds all data entirely in memory.
+
+    Optionally, an `InMemoryDataLoader` object can hold labels for the data. When provided, `read()` will
+    return the data and labels corresponding to the provided indices.
+    '''
+    def __init__(self, data: Iterable, labels: Iterable = None):
+        '''
+        Parameters:
+        - `data` must be an Iterable that can be sliced by index.
+        - `labels`, if provided, must also be an Iterable that can be sliced by index.
+
+        If `labels` is provided, it is expected to correspond to `data` by index 
+        (i.e. the label for data[i] is held at label[i])
+        '''
+        self._data = data
+        self._labels = labels
+
+    def read(self, idx_range: Iterable[int]) -> Tuple[Iterable, Iterable]:
+        '''
+        Returns data from `self._data` in the given `idx_range`. if available,
+        the data's corresponding labels are also returned.
+        '''
+        if self._labels is not None:
+            return (self._data[idx_range], self._labels[idx_range])
+        else:
+            return self._data[idx_range]
 
 
 class EmbeddedDataLoader(BaseDataLoader):
@@ -189,31 +218,5 @@ class LabeledDataLoader(BaseDataLoader):
         '''
         data = np.load(self.data_filepath, mmap_mode='r')
         data_batch = data[idx_range]
-        label_batch = self._labels[idx_range]
-        return (data_batch, label_batch)
-
-
-class InMemoryDataLoader(BaseDataLoader):
-    '''
-    Data Loader for data that can be held entirely in memory.
-
-    Expects both data and labels to be directly passed in.
-    '''
-    def __init__(self, data, labels):
-        '''
-        Parameters:
-        - `data`: iterable of all needed data
-        - `labels`: iterable of labels corresponding with entries
-        in `data`
-        '''
-        self.data = data
-        self._labels = labels
-
-    def read(self, idx_range: Iterable[int]) -> Tuple[Iterable, Iterable]:
-        '''
-        Returns data from `self._data` in the given `idx_range`.
-        Also returns labels corresponding to the current data batch.
-        '''
-        data_batch = self.data[idx_range]
         label_batch = self._labels[idx_range]
         return (data_batch, label_batch)
