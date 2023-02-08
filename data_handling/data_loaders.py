@@ -43,7 +43,7 @@ class MemoryMapDataLoader(BaseDataLoader):
     '''
     Loads data saved to a mmap file.
     '''
-    def __init__(self, data_filepath: str, labels: str | Iterable):
+    def __init__(self, data_filepath: str):
         ''' 
         `data_filepath`: path to the data mmap file
         '''
