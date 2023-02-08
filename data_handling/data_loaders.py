@@ -1,6 +1,7 @@
 '''
-The classes in this file are responsible for enabling batch loading
-of data from various sources.
+The classes in this file are responsible for batch loading data during model training.
+
+Each class targets a different data source (and, possibly, usage scenario).
 '''
 
 from typing import Generator, Iterable, List, Tuple
@@ -20,6 +21,7 @@ class BaseDataLoader():
     def read_metadata(self, idx_range) -> np.ndarray:
         raise NotImplementedError()
     
+
 class InMemoryDataLoader(BaseDataLoader):
     '''
     A simple DataLoader that holds all data entirely in memory.
