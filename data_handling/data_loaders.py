@@ -13,12 +13,9 @@ from database_utilities.database_handler import DatabaseHandler
 
 class BaseDataLoader():
     def __init__(self):
-        raise NotImplementedError('Cannot initialize an abstract class.')
+        raise NotImplementedError('Please use a subclass that inherits from BaseDataLoader.')
 
     def read(self, idx_range) -> np.ndarray:
-        raise NotImplementedError()
-
-    def read_metadata(self, idx_range) -> np.ndarray:
         raise NotImplementedError()
     
 
@@ -29,27 +26,34 @@ class InMemoryDataLoader(BaseDataLoader):
     Optionally, an `InMemoryDataLoader` object can hold labels for the data. When provided, `read()` will
     return the data and labels corresponding to the provided indices.
     '''
-    def __init__(self, data: Iterable, labels: Iterable = None):
+    def __init__(self, data: Iterable):
         '''
-        Parameters:
-        - `data` must be an Iterable that can be sliced by index.
-        - `labels`, if provided, must also be an Iterable that can be sliced by index.
-
-        If `labels` is provided, it is expected to correspond to `data` by index 
-        (i.e. the label for data[i] is held at label[i])
+        `data`: an Iterable that can be sliced by index.
         '''
         self._data = data
-        self._labels = labels
 
-    def read(self, idx_range: Iterable[int]) -> Tuple[Iterable, Iterable]:
+    def read(self, idx_range: Iterable[int]) -> Iterable:
         '''
-        Returns data from `self._data` in the given `idx_range`. if available,
-        the data's corresponding labels are also returned.
+        Returns data from `self._data` in the given `idx_range`.
         '''
-        if self._labels is not None:
-            return (self._data[idx_range], self._labels[idx_range])
-        else:
-            return self._data[idx_range]
+        return self._data[idx_range]
+        
+
+class MemoryMapDataLoader(BaseDataLoader):
+    '''
+    Loads data saved to a mmap file.
+    '''
+    def __init__(self, data_filepath: str, labels: str | Iterable):
+        ''' 
+        `data_filepath`: path to the data mmap file
+        '''
+        self.data_filepath = data_filepath
+
+    def read(self, idx_range: Iterable[int]) -> np.ndarray:
+        '''
+        Reads data from `self._data_filepath` in the given `idx_range`.
+        '''
+        return np.load(self.data_filepath, mmap_mode='r')[idx_range]
 
 
 class EmbeddedDataLoader(BaseDataLoader):
@@ -195,30 +199,3 @@ class SqliteDataLoader(BaseDataLoader):
     
     def read_metadata(self, idx_range) -> np.ndarray:
         return super().read_metadata(idx_range)
-
-class LabeledDataLoader(BaseDataLoader):
-    '''
-    Loads data that has corresponding labels.
-
-    Data must be saved to an mmap file. Labels must be directly
-    passed in.
-    '''
-    def __init__(self, data_filepath, labels):
-        ''' 
-        Parameters:
-        - `data_filepath`: path to the data mmap file
-        - `labels`: actual labels with indices corresponding to the 
-        data pointed at by `data_filepath`
-        '''
-        self.data_filepath = data_filepath
-        self._labels = labels
-
-    def read(self, idx_range: Iterable[int]) -> Tuple[np.ndarray, Iterable]:
-        '''
-        Reads data from `self._data_filepath` in the given `idx_range`.
-        Also returns labels corresponding to the current data batch.
-        '''
-        data = np.load(self.data_filepath, mmap_mode='r')
-        data_batch = data[idx_range]
-        label_batch = self._labels[idx_range]
-        return (data_batch, label_batch)
