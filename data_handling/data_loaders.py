@@ -4,7 +4,7 @@ The classes in this file are responsible for batch loading data during model tra
 Each class targets a different data source (and, possibly, usage scenario).
 '''
 
-from typing import Generator, Iterable, List
+from typing import Iterable, List
 from multiprocessing import Pool
 import numpy as np
 from database_utilities.database_handler import DatabaseHandler
@@ -22,9 +22,6 @@ class BaseDataLoader():
 class InMemoryDataLoader(BaseDataLoader):
     '''
     A simple DataLoader that holds all data entirely in memory.
-
-    Optionally, an `InMemoryDataLoader` object can hold labels for the data. When provided, `read()` will
-    return the data and labels corresponding to the provided indices.
     '''
     def __init__(self, data: Iterable):
         '''
@@ -58,10 +55,8 @@ class MemoryMapDataLoader(BaseDataLoader):
 
 class EmbeddedDataLoader(BaseDataLoader):
     '''
-    Data Loader used to load data from a pre-saved `.npy` file.
-
-    Currently, this class only supports metadata that is directly
-    passed in or saved to an mmap file.
+    Loads data from a pre-saved `.npy` file, where each filename is equal to the
+    index of the data in a larger dataset.
     '''
     def __init__(self, data_path: str, embedding_dim: int, n: int, n_procs: int = 2):
         '''
@@ -99,52 +94,9 @@ class EmbeddedDataLoader(BaseDataLoader):
         return np.stack(np_arrs)
 
 
-class PreSavedDataLoader(BaseDataLoader):
-    '''
-    Data Loader used to load data stored in an mmap file.
-
-    Supports metadata that is either directly passed in or saved
-    to an mmap file.
-    '''
-    def __init__(self, data_filepath, metadata=None, is_metadata_copied=True):
-        '''
-        Parameters:
-        - `data_filepath`: path to the data mmap file
-        - `metadata`: metadata related to the data being loaded; must be either the 
-        actual metadata or the path to an mmap file containing the metadata
-        - `is_metadata_copied`: `True` if `metadata` contains actual metadata, `False`
-        if the metadata must be loaded from a mmap file
-        '''
-        self._data_filepath = data_filepath
-        self._metadata = metadata
-        self._is_metadata_copied = is_metadata_copied
-
-    def read(self, idx_range: Iterable[int]) -> np.ndarray:
-        '''
-        Reads data from `self._data_filepath`.
-        '''
-        data = np.load(self._data_filepath, mmap_mode='r')
-        return data[idx_range]
-
-    def read_metadata(self, idx_range) -> np.ndarray:
-        '''
-        Reads metadata in from `self._metadata`.
-        '''
-        if self._metadata is None:
-            raise ValueError('No metadata provided to initializer.')
-
-        if self._is_metadata_copied:
-            selected_metadata = self._metadata[idx_range]
-            if type(selected_metadata) is csr_matrix:
-                selected_metadata = selected_metadata.toarray()
-            return selected_metadata
-        else:
-            metadata = np.load(self._metadata, mmap_mode='r')
-            return metadata[idx_range]
-
 class SqliteDataLoader(BaseDataLoader):
     '''
-    Loads data directly from a Sqlite3 database.
+    Loads data stored in a SQLite database.
     '''
     def __init__(self, database_path, table_name, data_column_name, vectorizer=None):
         self._db_handler = DatabaseHandler(database_path)
@@ -163,6 +115,3 @@ class SqliteDataLoader(BaseDataLoader):
         )[self._data_column_name].tolist()
 
         return self._vectorizer(data) if self._vectorizer else data
-    
-    def read_metadata(self, idx_range) -> np.ndarray:
-        return super().read_metadata(idx_range)
