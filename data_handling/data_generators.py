@@ -48,6 +48,9 @@ class BaseNLPGenerator(Sequence):
     def __len__(self):
         ''' Number of batches per epoch '''
         return math.ceil(len(self._pos_indices) / self._batch_size)
+    
+    def __getitem__(self, idx):
+        raise ValueError('Please use a subclass of BaseNLPGenerator.')
 
     def on_epoch_end(self):
         '''
@@ -89,24 +92,24 @@ class ABAEMetadataGenerator(BaseNLPGenerator):
     a `.read_metadata()` method for this purpose.
     '''
     def __init__(
-        self, 
-        metadata_col_name: str, 
-        data_loader: BaseDataLoader, 
+        self,
+        data_loader: BaseDataLoader,
+        metadata_loader: BaseDataLoader,
         indices: Iterable, 
         batch_size: int, 
         ngram_len: int, 
         embedding_dim: int):
         '''
         Parameters:
-        - `metadata_col_name` is the column name corresponding to the target metadata in the data source
-        - `data_loader` must be a class inheriting from `data_handling.BaseeDataLoader`
-        - `indices` is an iterable of valid indices
+        - `data_loader`: DataLoader for the training data
+        - `metadata_loader`: DataLoader for metadata used during model training
+        - `indices`: Iterable of valid indices
         - `batch_size`: number of rows in each batch
         - `ngram_len`: length of each ngram
-        - `embedding_dim`: embedding dimension used on datae
+        - `embedding_dim`: embedding dimension used on data
         '''
+        self._metadata_loader = metadata_loader
         super().__init__(data_loader, indices, batch_size, ngram_len, embedding_dim)
-        self._metadata_col_name = metadata_col_name
 
     def __getitem__(self, idx):
         '''
@@ -117,8 +120,8 @@ class ABAEMetadataGenerator(BaseNLPGenerator):
         neg_idx = self._neg_indices[idx_range.start:idx_range.stop]
 
         batch_pos = self._data_loader.read(pos_idx)
-        batch_metadata = self._data_loader.read_metadata(self._metadata_col_name, pos_idx)
         batch_neg = self._data_loader.read(neg_idx)
+        batch_metadata = self._metadata_loader.read(pos_idx)
 
         return [batch_pos, batch_neg, batch_metadata], np.ones(batch_pos.shape[0])
 
