@@ -211,10 +211,8 @@ if __name__ == '__main__':
             data_loader = data_loaders.EmbeddedDataLoader(
                 data_path=emb_data_dirpath, 
                 embedding_dim=emb_dim, 
-                n=n, 
-                metadata=metadata, 
-                n_procs=num_procs,
-                is_metadata_copied=metadata_copied
+                n=n,
+                n_procs=num_procs
             )
         case SupportedAspectModels.SIMPLE_ABAE, False:
             # Get required values for vectorization & embedding.

@@ -4,11 +4,11 @@ The classes in this file are responsible for batch loading data during model tra
 Each class targets a different data source (and, possibly, usage scenario).
 '''
 
-from typing import Generator, Iterable, List, Tuple
+from typing import Generator, Iterable, List
 from multiprocessing import Pool
 import numpy as np
-from scipy.sparse.csr import csr_matrix
 from database_utilities.database_handler import DatabaseHandler
+from utilities.data_preparation import split_chunks
 
 
 class BaseDataLoader():
@@ -63,63 +63,30 @@ class EmbeddedDataLoader(BaseDataLoader):
     Currently, this class only supports metadata that is directly
     passed in or saved to an mmap file.
     '''
-    def __init__(self, data_path, embedding_dim, n, metadata=None, n_procs=1, is_metadata_copied=True):
+    def __init__(self, data_path: str, embedding_dim: int, n: int, n_procs: int = 2):
         '''
         Parameters:
         - `data_path`: path to a directory containing `.npy` files; the filenames
         must be each data point's index
         - `embedding_dim`: the data's embedding dimensionality
         - `n`: equivalent to `0.5 * ngram length - 1`
-        - `metadata`: metadata related to the data being loaded; must be either the 
-        actual metadata or the path to an mmap file containing the metadata
         - `n_procs`: the number of processes to use when loading the data
-        - `is_metadata_copied`: `True` if `metadata` contains actual metadata, `False`
-        if the metadata must be loaded from a mmap file
         '''
         self._dir_path = data_path
         self._emb_dim = embedding_dim
         self._n = n # must be equal to 0.5 * window length - 1
         self._n_procs = n_procs
-        self._metadata = metadata # either actual metadata or path to mmap file
-        self._is_metadata_copied = is_metadata_copied
 
     def read(self, idx_range) -> np.ndarray:
         '''
         Reads data with indices within the provided `idx_range`.
         '''
-        grouped_indices = self._split_chunks(idx_range)
+        grouped_indices = split_chunks(idx_range, n_procs=self._n_procs)
         
         with Pool(self._n_procs) as p:
             res = p.map(self._fetch_embedded_data, grouped_indices)
 
         return np.concatenate(res)
-
-    def read_metadata(self, idx_range) -> np.ndarray:
-        '''
-        Reads metadata in from `self._metadata`.
-        '''
-        # TODO: Implement ability to read metadata from database as well.
-        if self._metadata is None:
-            raise ValueError('No metadata provided to initializer.')
-
-        if self._is_metadata_copied:
-            selected_metadata = self._metadata[idx_range]
-            if type(selected_metadata) is csr_matrix:
-                selected_metadata = selected_metadata.toarray()
-            return selected_metadata
-        else:
-            metadata = np.load(self._metadata, mmap_mode='r')
-            return metadata[idx_range]
-
-    def _split_chunks(self, idx_range: Iterable[int]) -> Generator[Iterable[int], None, None]:
-        '''
-        Splits a list of indices into chunks based on `self._n_threads`.
-
-        Yields a list of indices of length <= the calculated chunksize.
-        '''
-        chunksize = int(len(idx_range) / self._n_procs)
-        for i in range(0, len(idx_range), chunksize):
-            yield idx_range[i:i + chunksize]
 
     def _fetch_embedded_data(self, indices: Iterable[int]) -> np.ndarray:
         '''
