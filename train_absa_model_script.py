@@ -8,7 +8,7 @@ import os
 from typing import Dict
 from data_handling import data_loaders, data_generators
 from database_utilities.database_handler import DatabaseHandler
-from models.abae_models import New_ABAE, SimpleABAE, SimpleABAE_Emb
+from models.abae_models import *
 from data_handling.document_tokenizers import simple_tokenizer
 from data_handling import embedding_generation as eg
 import numpy as np
@@ -134,8 +134,10 @@ def create_model(model_type: SupportedAspectModels, use_emb_data: bool, **kwargs
             model = SimpleABAE(**valid_kwargs)
         case SupportedAspectModels.SIMPLE_ABAE, False:
             model = SimpleABAE_Emb(**valid_kwargs)
-        case SupportedAspectModels.NEW_ABAE:
+        case SupportedAspectModels.NEW_ABAE, True:
             model = New_ABAE(**valid_kwargs)
+        case SupportedAspectModels.NEW_ABAE, False:
+            model = New_ABAE_Emb(**valid_kwargs)
         case _:
             raise ValueError(f'Model of type {model_type} is not yet implemented.')
         
@@ -214,7 +216,7 @@ if __name__ == '__main__':
                 n=n,
                 n_procs=num_procs
             )
-        case SupportedAspectModels.SIMPLE_ABAE, False:
+        case SupportedAspectModels.SIMPLE_ABAE | SupportedAspectModels.NEW_ABAE, False:
             # Get required values for vectorization & embedding.
             db_table_name = f'{dataset_type.value}_n={n}'
             database_column_name = 'ngram' #TODO parameterize

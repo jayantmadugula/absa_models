@@ -199,7 +199,6 @@ class New_ABAE(SimpleABAE):
         neg_input = Input(shape=(maxlen, self._emb_dim), dtype='float32', name='neg_input')
 
         # Compute sentence representation
-        # e_w = word_emb(sentence_input)
         y_s = Average(name='sentence_avg')(emb_input)
         att_weights = Attention(name='att')([emb_input, y_s])
         pooled_weights = GlobalAveragePooling1D(name='pool', data_format='channels_first')(att_weights) #TODO: investigate max pooling
@@ -221,7 +220,43 @@ class New_ABAE(SimpleABAE):
         model.compile(optimizer=self._optimizer, loss=SimpleABAE.max_margin_loss, metrics=[SimpleABAE.max_margin_loss])
 
         return model
-        
+    
+class New_ABAE_Emb(SimpleABAE_Emb):
+    ''' This class uses a Keras Embedding layer, but otherwise is identical to New_ABAE. '''
+    def _compile_model(self):
+        maxlen = self._n
+        aspect_size = self._output_size
+
+        # Embedding layers
+        embedding_layer = self._embedding_layer
+
+        # Inputs
+        emb_input = Input(shape=(maxlen,), dtype='float32', name='sentence_input')
+        neg_input = Input(shape=(maxlen,), dtype='float32', name='neg_input')
+
+        # Compute sentence representation
+        pos_emb = embedding_layer(emb_input)
+        y_s = Average(name='sentence_avg')(pos_emb)
+        att_weights = Attention(name='att')([pos_emb, y_s])
+        pooled_weights = GlobalAveragePooling1D(name='pool', data_format='channels_first')(att_weights) #TODO: investigate max pooling
+        z_s = WeightedSum()([pos_emb, pooled_weights])
+
+        # Compute representations of negative instances
+        neg_emb = embedding_layer(neg_input)
+        z_n = Average()(neg_emb)
+
+        # Reconstruction
+        p_t = Dense(aspect_size)(z_s)
+        p_t = Activation('softmax', name='p_t')(p_t)
+        r_s = WeightedAspectEmb(aspect_size, self._emb_dim, name='aspect_emb',
+                                W_regularizer=self._ortho_reg)(p_t)
+
+        # Loss
+        loss = MaxMargin(neg_size=self._neg_size, name='max_margin')([z_s, z_n, r_s])
+        model = Model(inputs=[emb_input, neg_input], outputs=loss)
+        model.compile(optimizer=self._optimizer, loss=SimpleABAE.max_margin_loss, metrics=[SimpleABAE.max_margin_loss])
+
+        return model        
 
 class ABAE_T(SimpleABAE):
     '''
