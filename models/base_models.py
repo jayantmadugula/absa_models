@@ -14,18 +14,21 @@ import analysis.classifier_metrics as cm
 class BaseModel():
     '''
     This class defines a basic set of functions.
+
+    It acts as a base class for concrete model implementations.
+    When loading a saved Keras model, this class can be used to maintain the same function calls.
     '''
-    def __init__():
-        raise NotImplementedError('This is an abstract base class. Please use a concrete subclass.')
+    def __init__(self, model):
+        self._model = model
 
     def train(self, train_data, test_data):
-        raise NotImplementedError()
+        raise NotImplementedError('Please use a concrete subclass for training.')
     
     def test(self, test_data, test_labels):
-        raise NotImplementedError()
+        raise NotImplementedError('Please use a concrete subclass for model testing.')
 
     def predict(self, data):
-        raise NotImplementedError()
+        return self._model.predict(data)
 
 class BaseDeepNeuralNetwork(BaseModel):
     def __init__(self):
