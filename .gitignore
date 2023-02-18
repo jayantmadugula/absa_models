@@ -136,3 +136,4 @@ generated_embeddings/
 *.npy
 .DS_Store
 trained_models/
+test*.ipynb
