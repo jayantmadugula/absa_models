@@ -2,6 +2,7 @@
 
 import argparse
 from enum import Enum
+from utilities.script_helpers import SupportedDatasets
 
 
 class SupportedModels(Enum):
@@ -23,6 +24,15 @@ def setup_argparse() -> argparse.ArgumentParser:
         This can be the path to a saved Keras model that accepts an iterable of texts and outputs a sentiment tag, or one of the following strings, which correspond to pre-trained models: {', '.join([f'"{e.value}"' for e in SupportedModels])}.
     ''')
 
+    parser.add_argument(
+        'dataset_name',
+        type=str,
+        choices=[e.value for e in SupportedDatasets],
+        help=f'''
+        Name of the dataset used for inference.
+        '''
+    )
+
     return parser
 
 
@@ -30,4 +40,3 @@ if __name__ == '__main__':
     parser = setup_argparse()
     args = parser.parse_args()
 
-    
