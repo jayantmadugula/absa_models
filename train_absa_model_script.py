@@ -9,6 +9,7 @@ from typing import Dict
 from data_handling import data_loaders, data_generators
 from database_utilities.database_handler import DatabaseHandler
 from models.abae_models import *
+from utilities.script_helpers import SupportedDatasets
 from data_handling.document_tokenizers import simple_tokenizer
 from data_handling import embedding_generation as eg
 import numpy as np
@@ -23,8 +24,6 @@ class SupportedAspectModels(Enum):
     ABAE_A = 'ABAE_A'
     ABAE_ALSTM = 'ABAE_ALSTM'
 
-class SupportedDatasets(Enum):
-    RESTAURANT_REVIEWS = 'restaurantreviews'
 
 def setup_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='''
