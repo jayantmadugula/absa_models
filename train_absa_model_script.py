@@ -36,7 +36,7 @@ def setup_argparse() -> argparse.ArgumentParser:
         'dataset_name',
         type=str,
         choices=[e.value for e in SupportedDatasets],
-        help='Name of the dataset used for trainng.'
+        help='Name of the dataset used for training.'
     )
 
     parser.add_argument(
