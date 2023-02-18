@@ -3,6 +3,8 @@
 import argparse
 from enum import Enum
 from utilities.script_helpers import SupportedDatasets
+from models.bert_sentiment import SentimentBERT
+from database_utilities.database_handler import DatabaseHandler
 
 
 class SupportedModels(Enum):
@@ -29,8 +31,13 @@ def setup_argparse() -> argparse.ArgumentParser:
         type=str,
         choices=[e.value for e in SupportedDatasets],
         help=f'''
-        Name of the dataset used for inference.
-        '''
+        Name of the dataset used for inference.    
+    ''')
+
+    parser.add_argument(
+        'dataset_data_column_name',
+        type=str,
+        help='Column name containing the documents to run inference on.'
     )
 
     return parser
@@ -40,3 +47,4 @@ if __name__ == '__main__':
     parser = setup_argparse()
     args = parser.parse_args()
 
+    
