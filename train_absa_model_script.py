@@ -114,7 +114,7 @@ def validate_arguments(args):
     
 def save_model_settings(args_dict: Dict, params_dict: Dict, model_save_path: str):
     model_train_settings = {'script_args': args_dict, 'training_parameters': params_dict}
-    print(model_train_settings)
+    print(f'Model trained with settings:\n{model_train_settings}\n')
     with open((settings_path := f'{model_save_path}/train_settings.json'), 'w') as fp:
         json.dump(model_train_settings, fp)
         print(f'Saved model training settings at path: {settings_path}')
@@ -361,6 +361,7 @@ if __name__ == '__main__':
             batch_generator=data_generator
         )
 
+        print(f'\n\nModel training complete, saving to {model_save_path}')
         aspect_model._model.save(model_save_path)
         save_model_settings(vars(args), params_dict, model_save_path)
         print(f'Model training completed! The trained model has been saved to: {model_save_path}')
