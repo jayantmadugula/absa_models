@@ -1,11 +1,16 @@
 ''' This script uses pre-trained models to output metadata inferences. '''
 
 import argparse
+from datetime import datetime
 from enum import Enum
 import json
+
+import numpy as np
+from models.base_models import BaseModel
 from utilities.script_helpers import SupportedDatasets
 from models.bert_sentiment import SentimentBERT
 from database_utilities.database_handler import DatabaseHandler
+from tensorflow.keras.models import load_model
 
 
 class SupportedModels(Enum):
@@ -69,6 +74,10 @@ if __name__ == '__main__':
     with open('./parameters.json') as fp:
         params_dict = json.load(fp)
 
+    # Get output parameters.
+    output_root_dir = params_dict['generated_data']['metadata_predictions_root_dir']
+    output_filename = f'{args.model}_{args.dataset_name}/{datetime.now()}'
+
     # Set data parameters.
     db_path = params_dict['input_data']['database_path']
 
@@ -79,9 +88,22 @@ if __name__ == '__main__':
 
     # Get data for inference.
     db_handler = DatabaseHandler(db_path)
-    data_iter = db_handler.read(table_name, chunksize=10, columns=[args.data_column_name])
+    data_iter = (b['ngram'].to_list() for b in db_handler.read(table_name, chunksize=10000, columns=[args.data_column_name]))
 
-    # TEMP: hard-coded model & data for testing
-    model = SentimentBERT()
-    res = model.predict(next(data_iter)['ngram'].to_list())
-    print(res)
+    # Load model and run inference.
+    model = None
+    try:
+        match SupportedModels(args.model):
+            case SupportedModels.BERT_SENTIMENT:
+                model = SentimentBERT()
+                print('Successfully loaded SentimentBERT model.')
+    except ValueError:
+        # Load model from path.
+        print('Model argument not a member of SupportedModels. Assuming the provided argument is the filepath to a pre-trained Keras model.')
+        tf_model = load_model(args.model)
+        model = BaseModel(tf_model)
+        print('Successfully loaded model as a BaseModel instance.')
+
+    for batch in data_iter:
+        batch_preds = model.predict(batch)
+        print(f'Predictions complete ({len(batch)})')

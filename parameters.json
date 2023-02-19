@@ -8,6 +8,7 @@
     "generated_data": 
     {
         "embedding_output_root_dir": "./generated_embeddings/",
+        "metadata_predictions_root_dir": "./metadata_predictions/",
         "trained_model_output_root_dir": "./trained_models/"
     },
     "script_parameters": 
