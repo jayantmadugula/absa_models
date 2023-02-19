@@ -142,6 +142,19 @@ def determine_metadata(model_type: SupportedAspectModels, dataset_type: Supporte
             else:
                 print(f'Read array from {metadata_arg} and found invalid shape {arr.shape}.')
                 raise ValueError('Invalid metadata shape for ABAE_T.')
+        case SupportedAspectModels.ABAE_O | SupportedAspectModels.ABAE_A | SupportedAspectModels.ABAE_ALSTM, _:
+            # Need multi-dimensio`nal metadata for additional input.
+            arr = np.load(metadata_arg)
+
+            if len(arr.shape) == 1:
+                # Turn into one-hot encoding.
+                print('Running OneHotEncoder on single-dimensional metadata...')
+                return (OneHotEncoder(handle_unknown='ignore').fit_transform(arr.reshape(-1, 1)), True)
+            elif len(arr.shape) == 2:
+                return (arr, True)
+            else:
+                print(f'Read array from {metadata_arg} and found invalid shape {arr.shape}.')
+                raise ValueError(f'Invalid metadata shape for {model_type}.')
         case _:
             raise ValueError('Invalid model_type and dataset_type combination (for now, at least).')
 
@@ -160,6 +173,12 @@ def create_model(model_type: SupportedAspectModels, use_emb_data: bool, **kwargs
             model = New_ABAE_Emb(**valid_kwargs)
         case SupportedAspectModels.ABAE_T, False:
             model = ABAE_T_Emb(**valid_kwargs)
+        case SupportedAspectModels.ABAE_O, False:
+            model = ABAE_O_Emb(**valid_kwargs)
+        case SupportedAspectModels.ABAE_A, False:
+            model = ABAE_A_Emb(**valid_kwargs)
+        case SupportedAspectModels.ABAE_ALSTM, False:
+            model = ABAE_ALSTM_Emb(**valid_kwargs)
         case _:
             raise ValueError(f'Model of type {model_type} is not yet implemented.')
         
@@ -288,7 +307,8 @@ if __name__ == '__main__':
             vectorizer=vectorizer
         )
 
-        if model_type == SupportedAspectModels.SIMPLE_ABAE or model_type == SupportedAspectModels.NEW_ABAE:
+        if model_type in (SupportedAspectModels.SIMPLE_ABAE, SupportedAspectModels.NEW_ABAE):
+            # These models only accept a "positive" and "negative" data input.
             data_generator = data_generators.SimpleABAEGenerator(
                 data_loader=data_loader, 
                 indices=np.arange(num_rows),
@@ -296,9 +316,11 @@ if __name__ == '__main__':
                 ngram_len=window_len,
                 embedding_dim=emb_dim
             )
-        elif model_type == SupportedAspectModels.ABAE_T:
+        elif model_type in (SupportedAspectModels.ABAE_O, SupportedAspectModels.ABAE_A, SupportedAspectModels.ABAE_ALSTM):
+            # Remaining models require a single additional metadata input.
             if metadata_copied:
                 metadata_loader = data_loaders.InMemoryDataLoader(metadata)
+                target_input_size = metadata.shape[1] if metadata.shape[1] > 1 else None
             else:
                 raise ValueError('Currently, only in memory metadata loading is supported.')
 
