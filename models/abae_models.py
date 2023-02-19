@@ -294,6 +294,48 @@ class ABAE_T(SimpleABAE):
         model.compile(optimizer=self._optimizer, loss=SimpleABAE.max_margin_loss, metrics=[SimpleABAE.max_margin_loss])
 
         return model
+    
+class ABAE_T_Emb(SimpleABAE_Emb):
+    '''
+    This is a slight variation on ABAE, with a single-dimension secondary input (`target_input`).
+    The target input is added to the positive weights layer following the Attention layer.
+    '''
+    def _compile_model(self):
+        maxlen = self._n
+        aspect_size = self._output_size
+
+        # Embedding layers
+        embedding_layer = self._embedding_layer
+
+        # Inputs
+        emb_input = Input(shape=(maxlen,), dtype='float32', name='sentence_input')
+        neg_input = Input(shape=(maxlen,), dtype='float32', name='neg_input')
+        target_input = Input(shape=(1), dtype='float32', name='target_input')
+
+        # Compute sentence representation
+        pos_emb = embedding_layer(emb_input)
+        y_s = Average()(pos_emb)
+        att_weights = Attention_ABAE(name='att_weights')([pos_emb, y_s])
+        z_s = WeightedSum()([pos_emb, att_weights])
+
+        z_s = k_Average()([z_s, target_input]) # Integrates `target_input` into ABAE_T
+
+        # Compute representations of negative instances
+        neg_emb = embedding_layer(neg_input)
+        z_n = Average()(neg_emb)
+
+        # Reconstruction
+        p_t = Dense(aspect_size)(z_s)
+        p_t = Activation('softmax', name='p_t')(p_t)
+        r_s = WeightedAspectEmb(aspect_size, self._emb_dim, name='aspect_emb',
+                                W_regularizer=self._ortho_reg)(p_t)
+
+        # Loss
+        loss = MaxMargin(neg_size=self._neg_size, name='max_margin')([z_s, z_n, r_s])
+        model = Model(inputs=[emb_input, neg_input, target_input], outputs=loss)
+        model.compile(optimizer=self._optimizer, loss=SimpleABAE.max_margin_loss, metrics=[SimpleABAE.max_margin_loss])
+
+        return model
 
 class ABAE_O(SimpleABAE):
     '''
