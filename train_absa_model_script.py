@@ -88,6 +88,14 @@ def setup_argparse() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '-m',
+        '--metadata',
+        default=None,
+        required=False,
+        help='If None, no metadata is used for model training. Otherwise, provide a filepath to a .npy file containing the required metadata.'
+    )
+
+    parser.add_argument(
         '-d',
         '--debug',
         type=bool,
