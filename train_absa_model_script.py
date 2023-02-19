@@ -15,6 +15,7 @@ from data_handling import embedding_generation as eg
 import numpy as np
 import argparse
 from enum import Enum
+from sklearn.preprocessing import OneHotEncoder
 
 class SupportedAspectModels(Enum):
     SIMPLE_ABAE = 'SimpleABAE'
@@ -244,7 +245,7 @@ if __name__ == '__main__':
     elif metadata.shape[0] != num_rows:
         raise ValueError(f'Inconsistent number of rows in data and metadata inputs ({num_rows} and {metadata.shape[0]}, respectively).') 
     else:
-        print(f'Found {len(metadata)} rows of metadata at {metadata_filepath}')
+        print(f'Found {metadata.shape[0]} rows of metadata at {metadata_filepath}')
 
     # Training parameters. These are not always required.
     target_input_size = None
@@ -252,7 +253,9 @@ if __name__ == '__main__':
     embedding_matrix = None
 
     # Set up data loading for model training.
+    print('\nSetting up data and model for training.')
     if use_emb_data:
+        print(f'Setting up data for {model_type} with pre-saved embedded data at {emb_data_dirpath}')
         if model_type == SupportedAspectModels.SIMPLE_ABAE:
             # Using pre-saved & embedded data.
             data_loader = data_loaders.EmbeddedDataLoader(
@@ -272,6 +275,7 @@ if __name__ == '__main__':
         else:
             raise ValueError(f'Only {SupportedAspectModels.SIMPLE_ABAE} is supported with pre-embedded input data right now.')
     else:
+        print(f'Setting up data for {model_type}.')
         # Get required values for vectorization & embedding.
         db_table_name = f'{dataset_type.value}_n={n}'
         database_column_name = 'ngram' #TODO parameterize
@@ -349,6 +353,7 @@ if __name__ == '__main__':
         trainable_emb_layer=train_emb_layer
     )
     
+    print('\nStarting model training...')
     if not args.debug:
         aspect_model.train(
             in_data=None,
