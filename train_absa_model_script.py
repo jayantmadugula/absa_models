@@ -150,7 +150,7 @@ def determine_metadata(model_type: SupportedAspectModels, dataset_type: Supporte
             if len(arr.shape) == 1:
                 # Turn into one-hot encoding.
                 print('Running OneHotEncoder on single-dimensional metadata...')
-                return (OneHotEncoder(handle_unknown='ignore').fit_transform(arr.reshape(-1, 1)), True)
+                return (OneHotEncoder(handle_unknown='ignore').fit_transform(arr.reshape(-1, 1)).toarray(), True)
             elif len(arr.shape) == 2:
                 return (arr, True)
             else:
