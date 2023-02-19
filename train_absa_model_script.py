@@ -144,7 +144,7 @@ def determine_metadata(model_type: SupportedAspectModels, dataset_type: Supporte
                 print(f'Read array from {metadata_arg} and found invalid shape {arr.shape}.')
                 raise ValueError('Invalid metadata shape for ABAE_T.')
         case SupportedAspectModels.ABAE_O | SupportedAspectModels.ABAE_A | SupportedAspectModels.ABAE_ALSTM, _:
-            # Need multi-dimensio`nal metadata for additional input.
+            # Need multi-dimensional metadata for additional input.
             arr = np.load(metadata_arg)
 
             if len(arr.shape) == 1:
@@ -178,8 +178,6 @@ def create_model(model_type: SupportedAspectModels, use_emb_data: bool, **kwargs
             model = ABAE_O_Emb(**valid_kwargs)
         case SupportedAspectModels.ABAE_A, False:
             model = ABAE_A_Emb(**valid_kwargs)
-        case SupportedAspectModels.ABAE_ALSTM, False:
-            model = ABAE_ALSTM_Emb(**valid_kwargs)
         case _:
             raise ValueError(f'Model of type {model_type} is not yet implemented.')
         
