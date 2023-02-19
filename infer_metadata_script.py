@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime
 from enum import Enum
 import json
+import os
 
 import numpy as np
 from models.base_models import BaseModel
@@ -77,6 +78,11 @@ if __name__ == '__main__':
     # Get output parameters.
     output_root_dir = params_dict['generated_data']['metadata_predictions_root_dir']
     output_filename = f'{args.model}_{args.dataset_name}/{datetime.now()}'
+
+    try:
+        os.mkdir(f'{args.model}_{args.dataset_name}')
+    except:
+        pass # if the directory already exists, continue
 
     # Get model parameters.
     batch_size = params_dict['inference_parameters']['batch_size']
