@@ -392,7 +392,7 @@ class ABAE_O_Emb(SimpleABAE_Emb):
     The target input is averaged into the positive weights layer following the Attention layer.
     The secondary input is expected to be a 6-dimensional vector.
     '''
-    def __init__(self, target_input_size, neg_size, win_size, emb_dim, output_size, optimizer='adam', loss='categorical_crossentropy', loss_weights=None):
+    def __init__(self, num_tokens, target_input_size, neg_size, win_size, emb_dim, output_size, optimizer='adam', loss='categorical_crossentropy', loss_weights=None):
         self._target_input_size = target_input_size
 
         super().__init__(neg_size, win_size, emb_dim, output_size, optimizer=optimizer, loss=loss, loss_weights=loss_weights)
@@ -494,7 +494,7 @@ class ABAE_A_Emb(SimpleABAE_Emb):
     This is a slight variation on ABAE, with an n-dimensional secondary input (`target_input`).
     The target input is averaged into the positive weights layer following the Attention layer.
     '''
-    def __init__(self, target_input_size, neg_size, win_size, emb_dim, output_size, optimizer='adam', loss='categorical_crossentropy', loss_weights=None):
+    def __init__(self, num_tokens, target_input_size, neg_size, win_size, emb_dim, output_size, optimizer='adam', loss='categorical_crossentropy', loss_weights=None):
         self._target_input_size = target_input_size
 
         super().__init__(neg_size, win_size, emb_dim, output_size, optimizer=optimizer, loss=loss, loss_weights=loss_weights)
@@ -597,7 +597,7 @@ class ABAE_ALSTM_Emb(SimpleABAE_Emb):
     This is a slight variation on ABAE, with an n-dimensional secondary input (`target_input`).
     The target input is averaged into the positive weights layer following the Attention layer.
     '''
-    def __init__(self, target_input_size, neg_size, win_size, emb_dim, output_size, optimizer='adam', loss='categorical_crossentropy', loss_weights=None):
+    def __init__(self, num_tokens, target_input_size, neg_size, win_size, emb_dim, output_size, optimizer='adam', loss='categorical_crossentropy', loss_weights=None):
         self._target_input_size = target_input_size
 
         super().__init__(neg_size, win_size, emb_dim, output_size, optimizer=optimizer, loss=loss, loss_weights=loss_weights)
