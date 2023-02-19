@@ -78,6 +78,9 @@ if __name__ == '__main__':
     output_root_dir = params_dict['generated_data']['metadata_predictions_root_dir']
     output_filename = f'{args.model}_{args.dataset_name}/{datetime.now()}'
 
+    # Get model parameters.
+    batch_size = params_dict['inference_parameters']['batch_size']
+
     # Set data parameters.
     db_path = params_dict['input_data']['database_path']
 
@@ -88,7 +91,7 @@ if __name__ == '__main__':
 
     # Get data for inference.
     db_handler = DatabaseHandler(db_path)
-    data_iter = (b['ngram'].to_list() for b in db_handler.read(table_name, chunksize=10000, columns=[args.data_column_name]))
+    data_iter = (b['ngram'].to_list() for b in db_handler.read(table_name, chunksize=batch_size, columns=[args.data_column_name]))
 
     # Load model and run inference.
     model = None
@@ -104,6 +107,17 @@ if __name__ == '__main__':
         model = BaseModel(tf_model)
         print('Successfully loaded model as a BaseModel instance.')
 
-    for batch in data_iter:
+    all_preds = []
+    for i, batch in enumerate(data_iter):
         batch_preds = model.predict(batch)
-        print(f'Predictions complete ({len(batch)})')
+        print(f'Predictions complete ({len(batch)}): {i}')
+        all_preds.append(batch_preds)
+
+        if isinstance(model, SentimentBERT) and i % 20 == 0:
+            # TODO: hack to fix memory issue
+            # no impact on predictions since the same pre-trained weights are used
+            del model
+            model = SentimentBERT()
+
+    np.save(output_root_dir + output_filename, np.concatenate(all_preds))
+    print(f'Script complete! Predictions were written to: {output_root_dir + output_filename}')

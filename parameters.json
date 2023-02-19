@@ -25,5 +25,9 @@
     {
         "batch_size": 2500,
         "max_tokens": 50000
+    },
+    "inference_parameters":
+    {
+        "batch_size": 2500
     }
 }
