@@ -80,7 +80,7 @@ if __name__ == '__main__':
     output_filename = f'{args.model}_{args.dataset_name}/{datetime.now()}'
 
     try:
-        os.mkdir(f'{args.model}_{args.dataset_name}')
+        os.mkdir(output_root_dir + f'{args.model}_{args.dataset_name}')
     except:
         pass # if the directory already exists, continue
 
